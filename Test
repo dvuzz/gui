@@ -1903,319 +1903,126 @@ VirtualUser:CaptureController()
 VirtualUser:ClickButton2(Vector2.new())
 end)
 
--- Thêm đoạn code sau vào cuối file Source.txt (trước return library)
+local notifContainer
+local notifs = {}
 
--- Thêm phần khởi tạo hệ thống thông báo vào thư viện
-local notificationGui
-local notificationQueue = {}
-local PADDING_X = 20
-local PADDING_Y = 20
-local MAX_WIDTH = 350
-local NOTIFICATION_DURATION = 5
-local SLIDE_DURATION = 0.4
+local function createNotif(config)
+    config = config or {}
+    local content = config.Content or config.content or ""
+    local icon = config.Icon or config.icon or "info"
+    local duration = config.Duration or config.duration or 5
+    local callback = config.Callback or config.callback or nil
 
-local function createNotification(text, iconType)
-    local notif = Instance.new("Frame")
-    notif.BackgroundTransparency = 1
-    notif.Size = UDim2.new(0, MAX_WIDTH, 0, 60)
-    notif.Position = UDim2.new(1, -PADDING_X, 0, -100)
-    notif.AnchorPoint = Vector2.new(1, 0)
-    notif.ZIndex = 10
-    notif.Name = "Notification"
+    if not notifContainer then
+        notifContainer = Instance.new("ScreenGui")
+        notifContainer.Name = "FluxNotifications"
+        notifContainer.ResetOnSpawn = false
+        notifContainer.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        notifContainer.Parent = getgenv().Drawing and Drawing.new("Quad") and game:GetService("CoreGui") or game:GetService("CoreGui")
+    end
+
+   
+    local frame = Instance.new("Frame")
+    frame.BackgroundTransparency = 1
+    frame.Size = UDim2.new(0, 320, 0, 60)
+    frame.Position = UDim2.new(1, -20, 0, -100)
+    frame.AnchorPoint = Vector2.new(1, 0)
+    frame.ZIndex = 10
+    frame.Name = "Notification"
+
     
-    -- Background
     local bg = Instance.new("Frame")
-    bg.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+    bg.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
     bg.BorderSizePixel = 0
     bg.Size = UDim2.new(1, 0, 1, 0)
     bg.ZIndex = 10
-    bg.Parent = notif
+    bg.Parent = frame
+
     
-    local border = Instance.new("Frame")
-    border.BackgroundColor3 = Color3.fromRGB(60, 60, 65)
-    border.BorderSizePixel = 0
-    border.Size = UDim2.new(1, -2, 1, -2)
-    border.Position = UDim2.new(0, 1, 0, 1)
-    border.ZIndex = 11
-    border.BackgroundTransparency = 0.7
-    border.Parent = bg
-    
-    local iconChar = ""
-    if iconType == "info" then
-        iconChar = "ℹ"
-    elseif iconType == "success" then
-        iconChar = "✓"
-    elseif iconType == "warning" then
-        iconChar = "⚠"
-    else
-        iconChar = "•"
+    local iconText = "•"
+    if icon == "success" then iconText = "✓"
+    elseif icon == "warning" then iconText = "⚠"
+    elseif icon == "error" then iconText = "✗"
+    elseif icon == "info" then iconText = "ℹ"
     end
+
+    local iconLabel = Instance.new("TextLabel")
+    iconLabel.Text = iconText
+    iconLabel.Font = Enum.Font.SourceSansBold
+    iconLabel.TextSize = 22
+    iconLabel.TextColor3 = Color3.fromRGB(200, 200, 220)
+    iconLabel.BackgroundTransparency = 1
+    iconLabel.Size = UDim2.new(0, 40, 1, 0)
+    iconLabel.Position = UDim2.new(0, 10, 0, 0)
+    iconLabel.ZIndex = 11
+    iconLabel.Parent = frame
+
     
-    local icon = Instance.new("TextLabel")
-    icon.Text = iconChar
-    icon.Font = Enum.Font.SourceSansBold
-    icon.TextSize = 22
-    icon.TextColor3 = Color3.fromRGB(200, 200, 210)
-    icon.BackgroundTransparency = 1
-    icon.Size = UDim2.new(0, 36, 1, 0)
-    icon.Position = UDim2.new(0, 12, 0, 0)
-    icon.ZIndex = 12
-    icon.Parent = notif
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Text = tostring(content)
+    textLabel.Font = Enum.Font.GothamSemibold
+    textLabel.TextSize = 14
+    textLabel.TextColor3 = Color3.fromRGB(245, 245, 250)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Size = UDim2.new(1, -60, 1, -10)
+    textLabel.Position = UDim2.new(0, 55, 0, 5)
+    textLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textLabel.TextYAlignment = Enum.TextYAlignment.Top
+    textLabel.ZIndex = 11
+    textLabel.Parent = frame
+
+    frame.Parent = notifContainer
+
+    table.insert(notifs, frame)
+
     
-    local label = Instance.new("TextLabel")
-    label.Text = text
-    label.Font = Enum.Font.Gotham
-    label.TextSize = 16
-    label.TextColor3 = Color3.fromRGB(240, 240, 245)
-    label.BackgroundTransparency = 1
-    label.Size = UDim2.new(1, -60, 1, 0)
-    label.Position = UDim2.new(0, 60, 0, 0)
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.TextYAlignment = Enum.TextYAlignment.Center
-    label.ZIndex = 12
-    label.Parent = notif
-    
-    -- Close button (subtle "×")
-    local closeButton = Instance.new("TextButton")
-    closeButton.Text = "×"
-    closeButton.Font = Enum.Font.SourceSansBold
-    closeButton.TextSize = 20
-    closeButton.TextColor3 = Color3.fromRGB(180, 180, 190)
-    closeButton.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
-    closeButton.BorderSizePixel = 0
-    closeButton.Size = UDim2.new(0, 24, 0, 24)
-    closeButton.Position = UDim2.new(1, -32, 0, 18)
-    closeButton.ZIndex = 13
-    closeButton.AutoButtonColor = false
-    closeButton.Parent = notif
-    
-    closeButton.MouseButton1Click:Connect(function()
-        notif:Destroy()
-        for i, v in ipairs(notificationQueue) do
-            if v == notif then
-                table.remove(notificationQueue, i)
-                break
-            end
-        end
-        
-        for i, n in ipairs(notificationQueue) do
-            local targetY = PADDING_Y + (i - 1) * (n.AbsoluteSize.Y + PADDING_Y)
-            tweenService:Create(n, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                Position = UDim2.new(1, -PADDING_X, 0, targetY)
-            }):Play()
-        end
-    end)
-    
-    notif.Parent = notificationGui
-    table.insert(notificationQueue, notif)
-    
-    local startY = PADDING_Y + (#notificationQueue - 1) * (notif.AbsoluteSize.Y + PADDING_Y)
-    local tweenInfo = TweenInfo.new(SLIDE_DURATION, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0)
-    local tween = tweenService:Create(notif, tweenInfo, {
-        Position = UDim2.new(1, -PADDING_X, 0, startY),
-        BackgroundTransparency = 0
+    local targetY = 20 + (#notifs - 1) * 70
+    local tween = game:GetService("TweenService"):Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Position = UDim2.new(1, -20, 0, targetY)
     })
     tween:Play()
-    
-    spawn(function()
-        wait(NOTIFICATION_DURATION)
-        if notif.Parent then
-            local fadeTween = tweenService:Create(notif, TweenInfo.new(0.3), {BackgroundTransparency = 1, Size = UDim2.new(0, MAX_WIDTH, 0, 50)})
-            fadeTween:Play()
-            fadeTween.Completed:Wait()
-            notif:Destroy()
-            
-            for i, v in ipairs(notificationQueue) do
-                if v == notif then
-                    table.remove(notificationQueue, i)
-                    break
-                end
-            end
-            
-            for i, n in ipairs(notificationQueue) do
-                local targetY = PADDING_Y + (i - 1) * (n.AbsoluteSize.Y + PADDING_Y)
-                tweenService:Create(n, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                    Position = UDim2.new(1, -PADDING_X, 0, targetY)
-                }):Play()
-            end
-        end
-    end)
-end
 
-function library:Notify(text, iconType)
-    if not text or text == "" then return end
-    
-    -- Khởi tạo notification GUI nếu chưa có
-    if not notificationGui then
-        notificationGui = Instance.new("ScreenGui")
-        notificationGui.Name = "NotificationSystem"
-        notificationGui.ResetOnSpawn = false
-        notificationGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-        notificationGui.Parent = library.base
-    end
-    
-    createNotification(tostring(text), iconType or "info")
-end
-
--- Thêm phương thức này vào library để có thêm tùy chọn
-function library:CreateNotification(options)
-    options = options or {}
-    local text = options.Text or options.text or ""
-    local iconType = options.Icon or options.icon or options.IconType or options.iconType or "info"
-    local duration = options.Duration or options.duration or NOTIFICATION_DURATION
-    
-    if not text or text == "" then return end
-    
-    -- Khởi tạo notification GUI nếu chưa có
-    if not notificationGui then
-        notificationGui = Instance.new("ScreenGui")
-        notificationGui.Name = "NotificationSystem"
-        notificationGui.ResetOnSpawn = false
-        notificationGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-        notificationGui.Parent = library.base
-    end
-    
-    local notif = Instance.new("Frame")
-    notif.BackgroundTransparency = 1
-    notif.Size = UDim2.new(0, MAX_WIDTH, 0, 60)
-    notif.Position = UDim2.new(1, -PADDING_X, 0, -100)
-    notif.AnchorPoint = Vector2.new(1, 0)
-    notif.ZIndex = 10
-    notif.Name = "Notification"
-    
-    -- Background
-    local bg = Instance.new("Frame")
-    bg.BackgroundColor3 = options.BackgroundColor or Color3.fromRGB(30, 30, 35)
-    bg.BorderSizePixel = 0
-    bg.Size = UDim2.new(1, 0, 1, 0)
-    bg.ZIndex = 10
-    bg.Parent = notif
-    
-    local border = Instance.new("Frame")
-    border.BackgroundColor3 = options.BorderColor or Color3.fromRGB(60, 60, 65)
-    border.BorderSizePixel = 0
-    border.Size = UDim2.new(1, -2, 1, -2)
-    border.Position = UDim2.new(0, 1, 0, 1)
-    border.ZIndex = 11
-    border.BackgroundTransparency = options.BorderTransparency or 0.7
-    border.Parent = bg
-    
-    local iconChar = ""
-    if iconType == "info" then
-        iconChar = "ℹ"
-    elseif iconType == "success" then
-        iconChar = "✓"
-    elseif iconType == "warning" then
-        iconChar = "⚠"
-    elseif iconType == "error" then
-        iconChar = "✗"
-    else
-        iconChar = iconType
-    end
-    
-    local icon = Instance.new("TextLabel")
-    icon.Text = iconChar
-    icon.Font = options.IconFont or Enum.Font.SourceSansBold
-    icon.TextSize = options.IconSize or 22
-    icon.TextColor3 = options.IconColor or Color3.fromRGB(200, 200, 210)
-    icon.BackgroundTransparency = 1
-    icon.Size = UDim2.new(0, 36, 1, 0)
-    icon.Position = UDim2.new(0, 12, 0, 0)
-    icon.ZIndex = 12
-    icon.Parent = notif
-    
-    local label = Instance.new("TextLabel")
-    label.Text = text
-    label.Font = options.TextFont or Enum.Font.Gotham
-    label.TextSize = options.TextSize or 16
-    label.TextColor3 = options.TextColor or Color3.fromRGB(240, 240, 245)
-    label.BackgroundTransparency = 1
-    label.Size = UDim2.new(1, -60, 1, 0)
-    label.Position = UDim2.new(0, 60, 0, 0)
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.TextYAlignment = Enum.TextYAlignment.Center
-    label.ZIndex = 12
-    label.Parent = notif
-    
-    -- Close button (subtle "×")
-    local closeButton = Instance.new("TextButton")
-    closeButton.Text = options.CloseText or "×"
-    closeButton.Font = options.CloseFont or Enum.Font.SourceSansBold
-    closeButton.TextSize = options.CloseSize or 20
-    closeButton.TextColor3 = options.CloseColor or Color3.fromRGB(180, 180, 190)
-    closeButton.BackgroundColor3 = options.CloseBackgroundColor or Color3.fromRGB(40, 40, 45)
-    closeButton.BorderSizePixel = 0
-    closeButton.Size = UDim2.new(0, 24, 0, 24)
-    closeButton.Position = UDim2.new(1, -32, 0, 18)
-    closeButton.ZIndex = 13
-    closeButton.AutoButtonColor = false
-    closeButton.Parent = notif
-    
-    closeButton.MouseButton1Click:Connect(function()
-        notif:Destroy()
-        for i, v in ipairs(notificationQueue) do
-            if v == notif then
-                table.remove(notificationQueue, i)
-                break
-            end
-        end
-        
-        for i, n in ipairs(notificationQueue) do
-            local targetY = PADDING_Y + (i - 1) * (n.AbsoluteSize.Y + PADDING_Y)
-            tweenService:Create(n, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                Position = UDim2.new(1, -PADDING_X, 0, targetY)
-            }):Play()
-        end
-        
-        if options.OnClose then
-            options.OnClose()
-        end
-    end)
-    
-    notif.Parent = notificationGui
-    table.insert(notificationQueue, notif)
-    
-    local startY = PADDING_Y + (#notificationQueue - 1) * (notif.AbsoluteSize.Y + PADDING_Y)
-    local tweenInfo = TweenInfo.new(SLIDE_DURATION, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0)
-    local tween = tweenService:Create(notif, tweenInfo, {
-        Position = UDim2.new(1, -PADDING_X, 0, startY),
-        BackgroundTransparency = 0
-    })
-    tween:Play()
-    
-    if options.OnShow then
-        options.OnShow(notif)
-    end
     
     spawn(function()
         wait(duration)
-        if notif.Parent then
-            local fadeTween = tweenService:Create(notif, TweenInfo.new(0.3), {BackgroundTransparency = 1, Size = UDim2.new(0, MAX_WIDTH, 0, 50)})
-            fadeTween:Play()
-            fadeTween.Completed:Wait()
-            notif:Destroy()
-            
-            for i, v in ipairs(notificationQueue) do
-                if v == notif then
-                    table.remove(notificationQueue, i)
+        if frame.Parent then
+            local fade = game:GetService("TweenService"):Create(frame, TweenInfo.new(0.2), {BackgroundTransparency = 1})
+            fade:Play()
+            fade.Completed:Wait()
+            frame:Destroy()
+
+            for i, v in ipairs(notifs) do
+                if v == frame then
+                    table.remove(notifs, i)
                     break
                 end
             end
-            
-            for i, n in ipairs(notificationQueue) do
-                local targetY = PADDING_Y + (i - 1) * (n.AbsoluteSize.Y + PADDING_Y)
-                tweenService:Create(n, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                    Position = UDim2.new(1, -PADDING_X, 0, targetY)
+
+     
+            for i, n in ipairs(notifs) do
+                local newY = 20 + (i - 1) * 70
+                game:GetService("TweenService"):Create(n, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+                    Position = UDim2.new(1, -20, 0, newY)
                 }):Play()
             end
-            
-            if options.OnHide then
-                options.OnHide()
+
+            if callback then
+                callback()
             end
         end
     end)
-    
-    return notif
+end
+
+function lib:Notify(contentOrConfig, icon)
+    if type(contentOrConfig) == "string" then
+        createNotif({
+            Content = contentOrConfig,
+            Icon = icon,
+            Duration = 5
+        })
+    else
+        createNotif(contentOrConfig)
+    end
 end
 
 return library
