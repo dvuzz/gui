@@ -710,391 +710,258 @@ local function createSlider(option, parent)
 end
 
 local function createList(option, parent, holder)
-    local valueCount = 0
-    option.itemCount = 0
-    
-    -- Tạo frame chính
-    local main = library:Create("Frame", {
-        LayoutOrder = option.position,
-        Size = UDim2.new(1, 0, 0, 52),
-        BackgroundTransparency = 1,
-        Parent = parent.content
-    })
-    
-    local round = library:Create("ImageLabel", {
-        Position = UDim2.new(0, 6, 0, 4),
-        Size = UDim2.new(1, -12, 1, -8),
-        BackgroundTransparency = 1,
-        Image = "rbxassetid://3570695787",
-        ImageColor3 = Color3.fromRGB(40, 40, 40),
-        ScaleType = Enum.ScaleType.Slice,
-        SliceCenter = Rect.new(100, 100, 100, 100),
-        SliceScale = 0.02,
-        Parent = main
-    })
-    
-    local title = library:Create("TextLabel", {
-        Position = UDim2.new(0, 12, 0, 6),
-        Size = UDim2.new(1, -24, 0, 16),
-        BackgroundTransparency = 1,
-        Text = option.text,
-        TextSize = 14,
-        Font = Enum.Font.GothamBold,
-        TextColor3 = Color3.fromRGB(140, 140, 140),
-        TextXAlignment = Enum.TextXAlignment.Left,
-        Parent = main
-    })
-    
-    local listvalue = library:Create("TextLabel", {
-        Position = UDim2.new(0, 12, 0, 22),
-        Size = UDim2.new(1, -24, 0, 22),
-        BackgroundTransparency = 1,
-        Text = option.multiSelect and (option.selectedValues[1] or "...") or option.value,
-        TextSize = 16,
-        Font = Enum.Font.GothamBold,
-        TextColor3 = Color3.fromRGB(255, 255, 255),
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextYAlignment = Enum.TextYAlignment.Top,
-        Parent = main
-    })
-    
-    -- Hiển thị số lượng item đã chọn ở chế độ multi-select
-    local selectionCount = nil
-    if option.multiSelect then
-        selectionCount = library:Create("TextLabel", {
-            AnchorPoint = Vector2.new(1, 0),
-            Position = UDim2.new(1, -12, 0, 22),
-            Size = UDim2.new(0, 40, 0, 22),
-            BackgroundTransparency = 1,
-            Text = tostring(#option.selectedValues),
-            TextSize = 16,
-            Font = Enum.Font.GothamBold,
-            TextColor3 = Color3.fromRGB(100, 200, 255),
-            TextXAlignment = Enum.TextXAlignment.Right,
-            Parent = main
-        })
-    end
-    
-    library:Create("ImageLabel", {
-        Position = UDim2.new(1, -16, 0, 20),
-        Size = UDim2.new(-1, 20, 1, -20),
-        SizeConstraint = Enum.SizeConstraint.RelativeYY,
-        Rotation = 90,
-        BackgroundTransparency = 1,
-        Image = "rbxassetid://4918373417",
-        ImageColor3 = Color3.fromRGB(140, 140, 140),
-        ScaleType = Enum.ScaleType.Fit,
-        Parent = round
-    })
-    
-    -- Tạo popup holder
-    option.mainHolder = library:Create("ImageButton", {
-        ZIndex = 3,
-        Size = UDim2.new(0, 240, 0, 52),
-        BackgroundTransparency = 1,
-        Image = "rbxassetid://3570695787",
-        ImageTransparency = 1,
-        ImageColor3 = Color3.fromRGB(30, 30, 30),
-        ScaleType = Enum.ScaleType.Slice,
-        SliceCenter = Rect.new(100, 100, 100, 100),
-        SliceScale = 0.02,
-        Visible = false,
-        Parent = library.base
-    })
-    
-    -- Thanh tìm kiếm (nếu được kích hoạt)
-    if option.searchable then
-        local searchBox = library:Create("TextBox", {
-            Position = UDim2.new(0, 8, 0, 8),
-            Size = UDim2.new(1, -16, 0, 30),
-            BackgroundColor3 = Color3.fromRGB(20, 20, 20),
-            BorderSizePixel = 0,
-            PlaceholderText = "Search...",
-            PlaceholderColor3 = Color3.fromRGB(120, 120, 120),
-            TextColor3 = Color3.fromRGB(255, 255, 255),
-            ClearTextOnFocus = false,
-            Parent = option.mainHolder
-        })
-    end
-    
-    -- Khu vực cuộn
-    local content = library:Create("ScrollingFrame", {
-        ZIndex = 3,
-        Position = UDim2.new(0, 0, 0, option.searchable and 40 or 8),
-        Size = UDim2.new(1, 0, 1, option.searchable and -48 or -16),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        ScrollBarThickness = 4,
-        ScrollBarImageColor3 = Color3.fromRGB(80, 80, 80),
-        ScrollingDirection = Enum.ScrollingDirection.Y,
-        Parent = option.mainHolder
-    })
-    option.content = content
-    
-    library:Create("UIPadding", {
-        PaddingTop = UDim.new(0, 6),
-        PaddingBottom = UDim.new(0, 6),
-        Parent = content
-    })
-    
-    local layout = library:Create("UIListLayout", {
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        Parent = content
-    })
-    
-    -- Cập nhật kích thước tự động
-    layout.Changed:connect(function()
-        if option.mainHolder.Visible then
-            local targetHeight = math.min(layout.AbsoluteContentSize.Y + 12, option.maxVisibleItems * option.itemHeight)
-            option.mainHolder:TweenSize(UDim2.new(0, 240, 0, targetHeight + (option.searchable and 40 or 16)), "Out", "Quad", 0.2)
-            content.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y)
-        end
-    end)
-    
-    -- Biến trạng thái
-    local inContact = false
-    local hovering = false
-    
-    -- Sự kiện hover trên nút chính
-    round.InputBegan:connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
-            hovering = true
-            inContact = true
-            if not option.open then
-                tweenService:Create(round, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageColor3 = Color3.fromRGB(70, 70, 70)}):Play()
-            end
-        end
-    end)
-    
-    round.InputChanged:connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
-            -- Xử lý di chuyển chuột
-        end
-    end)
-    
-    round.InputEnded:connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
-            hovering = false
-            inContact = false
-            if not option.open then
-                tweenService:Create(round, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageColor3 = Color3.fromRGB(40, 40, 40)}):Play()
-            end
-        end
-    end)
-    
-    -- Sự kiện click để mở/đóng dropdown
-    round.MouseButton1Click:connect(function()
-        if library.activePopup and library.activePopup ~= option then
-            library.activePopup:Close()
-        end
-        
-        local position = main.AbsolutePosition
-        option.mainHolder.Position = UDim2.new(0, position.X - 5, 0, position.Y - 10)
-        option.open = not option.open
-        option.mainHolder.Visible = option.open
-        
-        if option.open then
-            library.activePopup = option
-            content.ScrollBarThickness = 6
-            
-            -- Tính toán kích thước popup
-            local itemCount = math.min(#option.values, option.maxVisibleItems)
-            local popupHeight = itemCount * option.itemHeight + (option.searchable and 40 or 16)
-            
-            -- Hiệu ứng mở
-            tweenService:Create(option.mainHolder, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                ImageTransparency = 0,
-                Size = UDim2.new(0, 240, 0, popupHeight),
-                Position = UDim2.new(0, position.X - 5, 0, position.Y - 4)
-            }):Play()
-            
-            -- Di chuyển mượt mà
-            tweenService:Create(option.mainHolder, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                Position = UDim2.new(0, position.X - 5, 0, position.Y + 1)
-            }):Play()
-            
-            -- Hiển thị các item
-            for _, child in ipairs(content:GetChildren()) do
-                if child:IsA("TextLabel") or child:IsA("ImageButton") then
-                    tweenService:Create(child, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                        BackgroundTransparency = 0,
-                        TextTransparency = 0,
-                        ImageTransparency = 0
-                    }):Play()
-                end
-            end
-        else
-            option:Close()
-        end
-    end)
-    
-    -- Sự kiện nhấn phím ESC để đóng dropdown
-    inputService.InputBegan:connect(function(input)
-        if input.KeyCode == Enum.KeyCode.Escape and option.open then
-            option:Close()
-        end
-    end)
-    
-    -- Hàm tạo item mới với các tính năng nâng cao
-    function option:AddValue(value)
-        option.itemCount = option.itemCount + 1
-        local stringValue = tostring(value)
-        
-        -- Tạo frame cho item
-        local itemFrame = library:Create("ImageButton", {
-            Name = "ListItem_" .. stringValue:gsub("%W", ""),
-            ZIndex = 3,
-            Size = UDim2.new(1, 0, 0, option.itemHeight - 4),
-            Position = UDim2.new(0, 4, 0, (option.itemCount - 1) * option.itemHeight + 2),
-            BackgroundColor3 = Color3.fromRGB(30, 30, 30),
-            BorderSizePixel = 0,
-            AutoButtonColor = false,
-            ClipsDescendants = true,
-            Parent = content
-        })
-        
-        -- Hiệu ứng hover
-        local itemHoverEffect = library:Create("Frame", {
-            Size = UDim2.new(1, 0, 1, 0),
-            BackgroundColor3 = Color3.fromRGB(60, 60, 60),
-            BackgroundTransparency = 1,
-            Parent = itemFrame
-        })
-        
-        -- Label hiển thị giá trị
-        local itemLabel = library:Create("TextLabel", {
-            Size = UDim2.new(1, -24, 1, 0),
-            BackgroundTransparency = 1,
-            Text = stringValue,
-            TextSize = 14,
-            Font = Enum.Font.GothamBold,
-            TextColor3 = Color3.fromRGB(255, 255, 255),
-            TextXAlignment = Enum.TextXAlignment.Left,
-            TextTruncate = Enum.TextTruncate.Clip,
-            Parent = itemFrame
-        })
-        
-        -- Dấu check cho chế độ multi-select
-        local checkmark = nil
-        if option.multiSelect then
-            checkmark = library:Create("ImageLabel", {
-                Name = "Checkmark",
-                AnchorPoint = Vector2.new(1, 0.5),
-                Position = UDim2.new(1, -8, 0.5, 0),
-                Size = UDim2.new(0, 18, 0, 18),
-                BackgroundTransparency = 1,
-                Image = "rbxassetid://4919148038",
-                ImageTransparency = 1,
-                ImageColor3 = Color3.fromRGB(255, 255, 255),
-                Parent = itemFrame
-            })
-            
-            -- Cập nhật trạng thái checkmark nếu item đã được chọn
-            if table.find(option.selectedValues, stringValue) then
-                checkmark.ImageTransparency = 0
-                itemFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-            end
-        end
-        
-        -- Sự kiện hover
-        itemFrame.MouseEnter:connect(function()
-            tweenService:Create(itemHoverEffect, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                BackgroundTransparency = 0.7
-            }):Play()
-        end)
-        
-        itemFrame.MouseLeave:connect(function()
-            tweenService:Create(itemHoverEffect, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                BackgroundTransparency = 1
-            }):Play()
-        end)
-        
-        -- Sự kiện click vào item
-        itemFrame.MouseButton1Click:connect(function()
-            if option.multiSelect then
-                local isSelected = table.find(option.selectedValues, stringValue)
-                
-                if isSelected then
-                    option:UnselectItem(stringValue)
-                    -- Cập nhật UI
-                    itemFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-                    checkmark.ImageTransparency = 1
-                else
-                    local success, msg = option:SelectItem(stringValue)
-                    if success then
-                        -- Cập nhật UI
-                        itemFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-                        checkmark.ImageTransparency = 0
-                    end
-                end
-                
-                -- Cập nhật số lượng item đã chọn
-                if selectionCount then
-                    selectionCount.Text = tostring(#option.selectedValues)
-                end
-            else
-                option:SetValue(stringValue)
-                option:Close()
-            end
-        end)
-        
-        -- Cập nhật giao diện ban đầu
-        if not option.multiSelect and option.value == stringValue then
-            itemFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-        end
-        
-        return itemFrame
-    end
-    
-    -- Hàm đóng dropdown
-    function option:Close()
-        library.activePopup = nil
-        self.open = false
-        content.ScrollBarThickness = 0
-        
-        local position = main.AbsolutePosition
-        
-        -- Hoạt ảnh đóng
-        tweenService:Create(round, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            ImageColor3 = Color3.fromRGB(40, 40, 40)
-        }):Play()
-        
-        tweenService:Create(self.mainHolder, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            ImageTransparency = 1,
-            Position = UDim2.new(0, position.X - 5, 0, position.Y - 10)
-        }):Play()
-        
-        for _, child in ipairs(self.content:GetChildren()) do
-            if child:IsA("ImageButton") or child:IsA("TextLabel") then
-                tweenService:Create(child, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                    BackgroundTransparency = 1,
-                    TextTransparency = 1,
-                    ImageTransparency = 1
-                }):Play()
-            end
-        end
-        
-        -- Ẩn sau khi hoàn tất hoạt ảnh
-        delay(0.3, function()
-            if not self.open then
-                self.mainHolder.Visible = false
-            end
-        end)
-    end
-    
-    -- Khởi tạo các item ban đầu
-    if #option.values > 0 then
-        for _, value in ipairs(option.values) do
-            option:AddValue(value)
-        end
-    end
-    
-    -- Cập nhật UI ban đầu cho chế độ multi-select
-    if option.multiSelect and selectionCount then
-        selectionCount.Text = tostring(#option.selectedValues)
-    end
-    
-    return option
+	local valueCount = 0
+	
+	local main = library:Create("Frame", {
+		LayoutOrder = option.position,
+		Size = UDim2.new(1, 0, 0, 52),
+		BackgroundTransparency = 1,
+		Parent = parent.content
+	})
+	
+	local round = library:Create("ImageLabel", {
+		Position = UDim2.new(0, 6, 0, 4),
+		Size = UDim2.new(1, -12, 1, -10),
+		BackgroundTransparency = 1,
+		Image = "rbxassetid://3570695787",
+		ImageColor3 = Color3.fromRGB(40, 40, 40),
+		ScaleType = Enum.ScaleType.Slice,
+		SliceCenter = Rect.new(100, 100, 100, 100),
+		SliceScale = 0.02,
+		Parent = main
+	})
+	
+	local title = library:Create("TextLabel", {
+		Position = UDim2.new(0, 12, 0, 8),
+		Size = UDim2.new(1, -24, 0, 14),
+		BackgroundTransparency = 1,
+		Text = option.text,
+		TextSize = 14,
+		Font = Enum.Font.GothamBold,
+		TextColor3 = Color3.fromRGB(140, 140, 140),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Parent = main
+	})
+	
+	local listvalue = library:Create("TextLabel", {
+		Position = UDim2.new(0, 12, 0, 20),
+		Size = UDim2.new(1, -24, 0, 24),
+		BackgroundTransparency = 1,
+		Text = option.value,
+		TextSize = 18,
+		Font = Enum.Font.GothamBold,
+		TextColor3 = Color3.fromRGB(255, 255, 255),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Parent = main
+	})
+	
+	library:Create("ImageLabel", {
+		Position = UDim2.new(1, -16, 0, 16),
+		Size = UDim2.new(-1, 32, 1, -32),
+		SizeConstraint = Enum.SizeConstraint.RelativeYY,
+		Rotation = 90,
+		BackgroundTransparency = 1,
+		Image = "rbxassetid://4918373417",
+		ImageColor3 = Color3.fromRGB(140, 140, 140),
+		ScaleType = Enum.ScaleType.Fit,
+		Parent = round
+	})
+	
+	option.mainHolder = library:Create("ImageButton", {
+		ZIndex = 3,
+		Size = UDim2.new(0, 240, 0, 52),
+		BackgroundTransparency = 1,
+		Image = "rbxassetid://3570695787",
+		ImageTransparency = 1,
+		ImageColor3 = Color3.fromRGB(30, 30, 30),
+		ScaleType = Enum.ScaleType.Slice,
+		SliceCenter = Rect.new(100, 100, 100, 100),
+		SliceScale = 0.02,
+		Visible = false,
+		Parent = library.base
+	})
+	
+	local content = library:Create("ScrollingFrame", {
+		ZIndex = 3,
+		Size = UDim2.new(1, 0, 1, 0),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarImageColor3 = Color3.fromRGB(),
+		ScrollBarThickness = 0,
+		ScrollingDirection = Enum.ScrollingDirection.Y,
+		Parent = option.mainHolder
+	})
+	
+	library:Create("UIPadding", {
+		PaddingTop = UDim.new(0, 6),
+		Parent = content
+	})
+	
+	local layout = library:Create("UIListLayout", {
+		Parent = content
+	})
+	
+	layout.Changed:connect(function()
+		option.mainHolder.Size = UDim2.new(0, 240, 0, (valueCount > 4 and (4 * 40) or layout.AbsoluteContentSize.Y) + 12)
+		content.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 12)
+	end)
+	
+	local inContact
+	round.InputBegan:connect(function(input)
+		if input.UserInputType == ui then
+			if library.activePopup then
+				library.activePopup:Close()
+			end
+			local position = main.AbsolutePosition
+			option.mainHolder.Position = UDim2.new(0, position.X - 5, 0, position.Y - 10)
+			option.open = true
+			option.mainHolder.Visible = true
+			library.activePopup = option
+			content.ScrollBarThickness = 6
+			tweenService:Create(option.mainHolder, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {ImageTransparency = 0, Position = UDim2.new(0, position.X - 5, 0, position.Y - 4)}):Play()
+			tweenService:Create(option.mainHolder, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {Position = UDim2.new(0, position.X - 5, 0, position.Y + 1)}):Play()
+			for _,label in next, content:GetChildren() do
+				if label:IsA"TextLabel" then
+					tweenService:Create(label, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0, TextTransparency = 0}):Play()
+				end
+			end
+		elseif input.UserInputType == Enum.UserInputType.Touch then
+			if library.activePopup then
+				library.activePopup:Close()
+			end
+			local position = main.AbsolutePosition
+			option.mainHolder.Position = UDim2.new(0, position.X - 5, 0, position.Y - 10)
+			option.open = true
+			option.mainHolder.Visible = true
+			library.activePopup = option
+			content.ScrollBarThickness = 6
+			tweenService:Create(option.mainHolder, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {ImageTransparency = 0, Position = UDim2.new(0, position.X - 5, 0, position.Y - 4)}):Play()
+			tweenService:Create(option.mainHolder, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {Position = UDim2.new(0, position.X - 5, 0, position.Y + 1)}):Play()
+			for _,label in next, content:GetChildren() do
+				if label:IsA"TextLabel" then
+					tweenService:Create(label, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0, TextTransparency = 0}):Play()
+				end
+			end
+		end
+		if input.UserInputType == Enum.UserInputType.MouseMovement then
+			inContact = true
+			if not option.open then
+				tweenService:Create(round, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageColor3 = Color3.fromRGB(60, 60, 60)}):Play()
+			end
+		end
+	end)
+	
+	round.InputEnded:connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement then
+			inContact = false
+			if not option.open then
+				tweenService:Create(round, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageColor3 = Color3.fromRGB(40, 40, 40)}):Play()
+			end
+		end
+	end)
+	
+	function option:AddValue(value)
+		valueCount = valueCount + 1
+		local label = library:Create("TextLabel", {
+			ZIndex = 3,
+			Size = UDim2.new(1, 0, 0, 40),
+			BackgroundColor3 = Color3.fromRGB(30, 30, 30),
+			BorderSizePixel = 0,
+			Text = "    " .. value,
+			TextSize = 14,
+			TextTransparency = self.open and 0 or 1,
+			Font = Enum.Font.GothamBold,
+			TextColor3 = Color3.fromRGB(255, 255, 255),
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Parent = content
+		})
+		
+		local inContact
+		local clicking
+		label.InputBegan:connect(function(input)
+			if input.UserInputType == ui then
+				clicking = true
+				tweenService:Create(label, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(10, 10, 10)}):Play()
+				self:SetValue(value)
+			elseif input.UserInputType == Enum.UserInputType.Touch then
+				clicking = true
+				tweenService:Create(label, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(10, 10, 10)}):Play()
+				self:SetValue(value)
+			end
+			if input.UserInputType == Enum.UserInputType.MouseMovement then
+				inContact = true
+				if not clicking then
+					tweenService:Create(label, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(20, 20, 20)}):Play()
+				end
+			end
+		end)
+		
+		label.InputEnded:connect(function(input)
+			if input.UserInputType == ui then
+				clicking = false
+				tweenService:Create(label, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = inContact and Color3.fromRGB(20, 20, 20) or Color3.fromRGB(30, 30, 30)}):Play()
+			elseif input.UserInputType == Enum.UserInputType.Touch then
+				clicking = false
+				tweenService:Create(label, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = inContact and Color3.fromRGB(20, 20, 20) or Color3.fromRGB(30, 30, 30)}):Play()
+			end
+			if input.UserInputType == Enum.UserInputType.MouseMovement then
+				inContact = false
+				if not clicking then
+					tweenService:Create(label, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(30, 30, 30)}):Play()
+				end
+			end
+		end)
+	end
+
+	if not table.find(option.values, option.value) then
+		option:AddValue(option.value)
+	end
+	
+	for _, value in next, option.values do
+		option:AddValue(tostring(value))
+	end
+	
+	function option:RemoveValue(value)
+		for _,label in next, content:GetChildren() do
+			if label:IsA"TextLabel" and label.Text == "	" .. value then
+				label:Destroy()
+				valueCount = valueCount - 1
+				break
+			end
+		end
+		if self.value == value then
+			self:SetValue("")
+		end
+	end
+	
+	function option:SetValue(value)
+		library.flags[self.flag] = tostring(value)
+		self.value = tostring(value)
+		listvalue.Text = self.value
+		self.callback(value)
+	end
+	
+	function option:Close()
+		library.activePopup = nil
+		self.open = false
+		content.ScrollBarThickness = 0
+		local position = main.AbsolutePosition
+		tweenService:Create(round, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageColor3 = inContact and Color3.fromRGB(60, 60, 60) or Color3.fromRGB(40, 40, 40)}):Play()
+		tweenService:Create(self.mainHolder, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageTransparency = 1, Position = UDim2.new(0, position.X - 5, 0, position.Y -10)}):Play()
+		for _,label in next, content:GetChildren() do
+			if label:IsA"TextLabel" then
+				tweenService:Create(label, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1, TextTransparency = 1}):Play()
+			end
+		end
+		wait(0.3)
+		--delay(0.3, function()
+			if not self.open then
+				self.mainHolder.Visible = false
+			end
+		--end)
+	end
+
+	return option
 end
 
 local function createBox(option, parent)
@@ -1864,315 +1731,20 @@ local function getFnctions(parent)
 	end
 	
 	function parent:AddList(option)
-    -- Validate và chuẩn hóa option table
-    option = typeof(option) == "table" and option or {}
-    
-    -- Validation cơ bản
-    option.text = tostring(option.text or "List")
-    option.values = (typeof(option.values) == "table" and #option.values > 0) and option.values or {"Default"}
-    
-    -- Xử lý giá trị mặc định một cách thông minh hơn
-    local defaultValue
-    if option.value then
-        defaultValue = tostring(option.value)
-    elseif option.defaultIndex and type(option.defaultIndex) == "number" and option.defaultIndex >= 1 and option.defaultIndex <= #option.values then
-        defaultValue = tostring(option.values[option.defaultIndex])
-    else
-        defaultValue = tostring(option.values[1])
-    end
-    
-    -- Callback validation
-    option.callback = typeof(option.callback) == "function" and option.callback or function() end
-    option.onChange = typeof(option.onChange) == "function" and option.onChange or nil
-    
-    -- Cấu hình mở rộng
-    option.multiSelect = typeof(option.multiSelect) == "boolean" and option.multiSelect or false
-    option.maxSelections = option.multiSelect and (type(option.maxSelections) == "number" and option.maxSelections > 0 and option.maxSelections or nil) or nil
-    option.allowCustomInput = typeof(option.allowCustomInput) == "boolean" and option.allowCustomInput or false
-    option.searchable = typeof(option.searchable) == "boolean" and option.searchable or false
-    option.itemHeight = type(option.itemHeight) == "number" and option.itemHeight > 0 and option.itemHeight or 40
-    option.maxVisibleItems = type(option.maxVisibleItems) == "number" and option.maxVisibleItems > 0 and option.maxVisibleItems or 6
-    
-    -- Thiết lập trạng thái ban đầu
-    option.open = false
-    option.type = "list"
-    option.position = #self.options
-    option.flag = option.flag or option.text
-    
-    -- Xử lý giá trị ban đầu dựa trên chế độ multiSelect
-    if option.multiSelect then
-        option.selectedValues = {}
-        if type(option.selectedValues) == "table" then
-            -- Chuyển đổi giá trị ban đầu thành mảng hợp lệ
-            for _, val in ipairs(option.selectedValues) do
-                table.insert(option.selectedValues, tostring(val))
-            end
-        end
-        library.flags[option.flag] = option.selectedValues
-    else
-        option.value = defaultValue
-        library.flags[option.flag] = option.value
-    end
-    
-    -- Thêm vào danh sách options
-    table.insert(self.options, option)
-    
-    -- Phương thức mở rộng cho List API
-    function option:AddItem(value)
-        if typeof(value) ~= "string" and typeof(value) ~= "number" then
-            return false, "Invalid item type. Must be string or number."
-        end
-        
-        value = tostring(value)
-        if table.find(self.values, value) then
-            return false, "Item already exists"
-        end
-        
-        table.insert(self.values, value)
-        
-        -- Nếu là item đầu tiên và không có giá trị được chọn
-        if #self.values == 1 and not self.multiSelect and (not self.value or self.value == "")) then
-            self:SetValue(value)
-        end
-        
-        -- Cập nhật UI nếu list đang mở
-        if self.mainHolder and self.mainHolder.Visible then
-            self:RefreshItems()
-        end
-        
-        return true
-    end
-    
-    function option:RemoveItem(value)
-        if typeof(value) ~= "string" and typeof(value) ~= "number" then
-            return false, "Invalid item type. Must be string or number."
-        end
-        
-        value = tostring(value)
-        local index = table.find(self.values, value)
-        
-        if not index then
-            return false, "Item not found"
-        end
-        
-        table.remove(self.values, index)
-        
-        -- Xử lý nếu item bị xóa là giá trị đang được chọn
-        if not self.multiSelect then
-            if self.value == value then
-                if #self.values > 0 then
-                    self:SetValue(self.values[1])
-                else
-                    self:SetValue("")
-                end
-            end
-        else
-            -- Xóa khỏi danh sách đã chọn nếu tồn tại
-            local selectedIndex = table.find(self.selectedValues, value)
-            if selectedIndex then
-                table.remove(self.selectedValues, selectedIndex)
-                if self.onChange then
-                    self.onChange(self.selectedValues)
-                end
-            end
-        end
-        
-        -- Cập nhật UI nếu list đang mở
-        if self.mainHolder and self.mainHolder.Visible then
-            self:RefreshItems()
-        end
-        
-        return true
-    end
-    
-    function option:ClearItems()
-        self.values = {}
-        if not self.multiSelect then
-            self:SetValue("")
-        else
-            self.selectedValues = {}
-            if self.onChange then
-                self.onChange(self.selectedValues)
-            end
-        end
-        
-        if self.mainHolder and self.mainHolder.Visible then
-            self:RefreshItems()
-        end
-    end
-    
-    function option:RefreshItems()
-        -- Xóa tất cả các item cũ
-        for _, child in ipairs(self.content:GetChildren()) do
-            if child.Name == "ListItem" then
-                child:Destroy()
-            end
-        end
-        
-        -- Tạo lại các item mới
-        self.valueCount = 0
-        for _, value in ipairs(self.values) do
-            self:AddValue(value)
-        end
-        
-        -- Cập nhật kích thước popup
-        local layout = self.content:FindFirstChildOfClass("UIListLayout")
-        if layout then
-            self.mainHolder.Size = UDim2.new(0, 240, 0, math.min(self.itemCount * self.itemHeight, self.maxVisibleItems * self.itemHeight) + 24)
-            self.content.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y)
-        end
-    end
-    
-    function option:HasItem(value)
-        return table.find(self.values, tostring(value)) ~= nil
-    end
-    
-    function option:GetItems()
-        return table.clone(self.values)
-    end
-    
-    function option:SetValue(value)
-        if self.multiSelect then
-            return false, "Cannot use SetValue with multiSelect enabled. Use SelectItem/UnselectItem instead."
-        end
-        
-        local stringValue = tostring(value)
-        
-        -- Chỉ cập nhật nếu giá trị thay đổi
-        if self.value ~= stringValue then
-            if #self.values > 0 and not self:HasItem(value) then
-                if self.allowCustomInput then
-                    self:AddItem(stringValue)
-                else
-                    return false, "Value not found in list items"
-                end
-            end
-            
-            self.value = stringValue
-            library.flags[self.flag] = self.value
-            
-            -- Cập nhật giao diện nếu tồn tại
-            if self.listvalue then
-                self.listvalue.Text = self.value
-            end
-            
-            -- Gọi callbacks
-            self.callback(self.value)
-            if self.onChange then
-                self.onChange(self.value)
-            end
-        end
-        
-        return true
-    end
-    
-    function option:SelectItem(value)
-        if not self.multiSelect then
-            return false, "Cannot use SelectItem with multiSelect disabled. Use SetValue instead."
-        end
-        
-        value = tostring(value)
-        
-        -- Kiểm tra nếu giá trị tồn tại trong danh sách
-        if not self:HasItem(value) then
-            if self.allowCustomInput then
-                self:AddItem(value)
-            else
-                return false, "Value not found in list items"
-            end
-        end
-        
-        -- Kiểm tra nếu đã chọn giá trị này rồi
-        if table.find(self.selectedValues, value) then
-            return true  -- Đã chọn rồi
-        end
-        
-        -- Kiểm tra giới hạn số lượng lựa chọn
-        if self.maxSelections and #self.selectedValues >= self.maxSelections then
-            return false, string.format("Maximum %d selections reached", self.maxSelections)
-        end
-        
-        -- Thêm vào danh sách đã chọn
-        table.insert(self.selectedValues, value)
-        
-        -- Cập nhật UI
-        if self.mainHolder and self.mainHolder.Visible then
-            local itemFrame = self.content:FindFirstChild("ListItem_" .. value)
-            if itemFrame then
-                local checkmark = itemFrame:FindFirstChild("Checkmark")
-                if checkmark then
-                    checkmark.ImageTransparency = 0
-                end
-                itemFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-            end
-        end
-        
-        library.flags[self.flag] = table.clone(self.selectedValues)
-        
-        -- Gọi callbacks
-        self.callback(table.clone(self.selectedValues))
-        if self.onChange then
-            self.onChange(table.clone(self.selectedValues))
-        end
-        
-        return true
-    end
-    
-    function option:UnselectItem(value)
-        if not self.multiSelect then
-            return false, "Cannot use UnselectItem with multiSelect disabled."
-        end
-        
-        value = tostring(value)
-        local index = table.find(self.selectedValues, value)
-        
-        if not index then
-            return false, "Item not selected"
-        end
-        
-        table.remove(self.selectedValues, index)
-        
-        -- Cập nhật UI
-        if self.mainHolder and self.mainHolder.Visible then
-            local itemFrame = self.content:FindFirstChild("ListItem_" .. value)
-            if itemFrame then
-                local checkmark = itemFrame:FindFirstChild("Checkmark")
-                if checkmark then
-                    checkmark.ImageTransparency = 1
-                end
-                itemFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-            end
-        end
-        
-        library.flags[self.flag] = table.clone(self.selectedValues)
-        
-        -- Gọi callbacks
-        self.callback(table.clone(self.selectedValues))
-        if self.onChange then
-            self.onChange(table.clone(self.selectedValues))
-        end
-        
-        return true
-    end
-    
-    function option:IsItemSelected(value)
-        if self.multiSelect then
-            return table.find(self.selectedValues, tostring(value)) ~= nil
-        else
-            return self.value == tostring(value)
-        end
-    end
-    
-    function option:GetSelectedItems()
-        if self.multiSelect then
-            return table.clone(self.selectedValues)
-        else
-            return self.value
-        end
-    end
-    
-    return option
-end
+		option = typeof(option) == "table" and option or {}
+		option.text = tostring(option.text)
+		option.values = typeof(option.values) == "table" and option.values or {}
+		option.value = tostring(option.value or option.values[1] or "")
+		option.callback = typeof(option.callback) == "function" and option.callback or function() end
+		option.open = false
+		option.type = "list"
+		option.position = #self.options
+		option.flag = option.flag or option.text
+		library.flags[option.flag] = option.value
+		table.insert(self.options, option)
+		
+		return option
+	end
 	
 	function parent:AddBox(option)
 		option = typeof(option) == "table" and option or {}
@@ -2330,5 +1902,320 @@ game:service('Players').LocalPlayer.Idled:connect(function()
 VirtualUser:CaptureController()
 VirtualUser:ClickButton2(Vector2.new())
 end)
+
+-- Thêm đoạn code sau vào cuối file Source.txt (trước return library)
+
+-- Thêm phần khởi tạo hệ thống thông báo vào thư viện
+local notificationGui
+local notificationQueue = {}
+local PADDING_X = 20
+local PADDING_Y = 20
+local MAX_WIDTH = 350
+local NOTIFICATION_DURATION = 5
+local SLIDE_DURATION = 0.4
+
+local function createNotification(text, iconType)
+    local notif = Instance.new("Frame")
+    notif.BackgroundTransparency = 1
+    notif.Size = UDim2.new(0, MAX_WIDTH, 0, 60)
+    notif.Position = UDim2.new(1, -PADDING_X, 0, -100)
+    notif.AnchorPoint = Vector2.new(1, 0)
+    notif.ZIndex = 10
+    notif.Name = "Notification"
+    
+    -- Background
+    local bg = Instance.new("Frame")
+    bg.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+    bg.BorderSizePixel = 0
+    bg.Size = UDim2.new(1, 0, 1, 0)
+    bg.ZIndex = 10
+    bg.Parent = notif
+    
+    local border = Instance.new("Frame")
+    border.BackgroundColor3 = Color3.fromRGB(60, 60, 65)
+    border.BorderSizePixel = 0
+    border.Size = UDim2.new(1, -2, 1, -2)
+    border.Position = UDim2.new(0, 1, 0, 1)
+    border.ZIndex = 11
+    border.BackgroundTransparency = 0.7
+    border.Parent = bg
+    
+    local iconChar = ""
+    if iconType == "info" then
+        iconChar = "ℹ"
+    elseif iconType == "success" then
+        iconChar = "✓"
+    elseif iconType == "warning" then
+        iconChar = "⚠"
+    else
+        iconChar = "•"
+    end
+    
+    local icon = Instance.new("TextLabel")
+    icon.Text = iconChar
+    icon.Font = Enum.Font.SourceSansBold
+    icon.TextSize = 22
+    icon.TextColor3 = Color3.fromRGB(200, 200, 210)
+    icon.BackgroundTransparency = 1
+    icon.Size = UDim2.new(0, 36, 1, 0)
+    icon.Position = UDim2.new(0, 12, 0, 0)
+    icon.ZIndex = 12
+    icon.Parent = notif
+    
+    local label = Instance.new("TextLabel")
+    label.Text = text
+    label.Font = Enum.Font.Gotham
+    label.TextSize = 16
+    label.TextColor3 = Color3.fromRGB(240, 240, 245)
+    label.BackgroundTransparency = 1
+    label.Size = UDim2.new(1, -60, 1, 0)
+    label.Position = UDim2.new(0, 60, 0, 0)
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.TextYAlignment = Enum.TextYAlignment.Center
+    label.ZIndex = 12
+    label.Parent = notif
+    
+    -- Close button (subtle "×")
+    local closeButton = Instance.new("TextButton")
+    closeButton.Text = "×"
+    closeButton.Font = Enum.Font.SourceSansBold
+    closeButton.TextSize = 20
+    closeButton.TextColor3 = Color3.fromRGB(180, 180, 190)
+    closeButton.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+    closeButton.BorderSizePixel = 0
+    closeButton.Size = UDim2.new(0, 24, 0, 24)
+    closeButton.Position = UDim2.new(1, -32, 0, 18)
+    closeButton.ZIndex = 13
+    closeButton.AutoButtonColor = false
+    closeButton.Parent = notif
+    
+    closeButton.MouseButton1Click:Connect(function()
+        notif:Destroy()
+        for i, v in ipairs(notificationQueue) do
+            if v == notif then
+                table.remove(notificationQueue, i)
+                break
+            end
+        end
+        
+        for i, n in ipairs(notificationQueue) do
+            local targetY = PADDING_Y + (i - 1) * (n.AbsoluteSize.Y + PADDING_Y)
+            tweenService:Create(n, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Position = UDim2.new(1, -PADDING_X, 0, targetY)
+            }):Play()
+        end
+    end)
+    
+    notif.Parent = notificationGui
+    table.insert(notificationQueue, notif)
+    
+    local startY = PADDING_Y + (#notificationQueue - 1) * (notif.AbsoluteSize.Y + PADDING_Y)
+    local tweenInfo = TweenInfo.new(SLIDE_DURATION, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0)
+    local tween = tweenService:Create(notif, tweenInfo, {
+        Position = UDim2.new(1, -PADDING_X, 0, startY),
+        BackgroundTransparency = 0
+    })
+    tween:Play()
+    
+    spawn(function()
+        wait(NOTIFICATION_DURATION)
+        if notif.Parent then
+            local fadeTween = tweenService:Create(notif, TweenInfo.new(0.3), {BackgroundTransparency = 1, Size = UDim2.new(0, MAX_WIDTH, 0, 50)})
+            fadeTween:Play()
+            fadeTween.Completed:Wait()
+            notif:Destroy()
+            
+            for i, v in ipairs(notificationQueue) do
+                if v == notif then
+                    table.remove(notificationQueue, i)
+                    break
+                end
+            end
+            
+            for i, n in ipairs(notificationQueue) do
+                local targetY = PADDING_Y + (i - 1) * (n.AbsoluteSize.Y + PADDING_Y)
+                tweenService:Create(n, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                    Position = UDim2.new(1, -PADDING_X, 0, targetY)
+                }):Play()
+            end
+        end
+    end)
+end
+
+function library:Notify(text, iconType)
+    if not text or text == "" then return end
+    
+    -- Khởi tạo notification GUI nếu chưa có
+    if not notificationGui then
+        notificationGui = Instance.new("ScreenGui")
+        notificationGui.Name = "NotificationSystem"
+        notificationGui.ResetOnSpawn = false
+        notificationGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        notificationGui.Parent = library.base
+    end
+    
+    createNotification(tostring(text), iconType or "info")
+end
+
+-- Thêm phương thức này vào library để có thêm tùy chọn
+function library:CreateNotification(options)
+    options = options or {}
+    local text = options.Text or options.text or ""
+    local iconType = options.Icon or options.icon or options.IconType or options.iconType or "info"
+    local duration = options.Duration or options.duration or NOTIFICATION_DURATION
+    
+    if not text or text == "" then return end
+    
+    -- Khởi tạo notification GUI nếu chưa có
+    if not notificationGui then
+        notificationGui = Instance.new("ScreenGui")
+        notificationGui.Name = "NotificationSystem"
+        notificationGui.ResetOnSpawn = false
+        notificationGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        notificationGui.Parent = library.base
+    end
+    
+    local notif = Instance.new("Frame")
+    notif.BackgroundTransparency = 1
+    notif.Size = UDim2.new(0, MAX_WIDTH, 0, 60)
+    notif.Position = UDim2.new(1, -PADDING_X, 0, -100)
+    notif.AnchorPoint = Vector2.new(1, 0)
+    notif.ZIndex = 10
+    notif.Name = "Notification"
+    
+    -- Background
+    local bg = Instance.new("Frame")
+    bg.BackgroundColor3 = options.BackgroundColor or Color3.fromRGB(30, 30, 35)
+    bg.BorderSizePixel = 0
+    bg.Size = UDim2.new(1, 0, 1, 0)
+    bg.ZIndex = 10
+    bg.Parent = notif
+    
+    local border = Instance.new("Frame")
+    border.BackgroundColor3 = options.BorderColor or Color3.fromRGB(60, 60, 65)
+    border.BorderSizePixel = 0
+    border.Size = UDim2.new(1, -2, 1, -2)
+    border.Position = UDim2.new(0, 1, 0, 1)
+    border.ZIndex = 11
+    border.BackgroundTransparency = options.BorderTransparency or 0.7
+    border.Parent = bg
+    
+    local iconChar = ""
+    if iconType == "info" then
+        iconChar = "ℹ"
+    elseif iconType == "success" then
+        iconChar = "✓"
+    elseif iconType == "warning" then
+        iconChar = "⚠"
+    elseif iconType == "error" then
+        iconChar = "✗"
+    else
+        iconChar = iconType
+    end
+    
+    local icon = Instance.new("TextLabel")
+    icon.Text = iconChar
+    icon.Font = options.IconFont or Enum.Font.SourceSansBold
+    icon.TextSize = options.IconSize or 22
+    icon.TextColor3 = options.IconColor or Color3.fromRGB(200, 200, 210)
+    icon.BackgroundTransparency = 1
+    icon.Size = UDim2.new(0, 36, 1, 0)
+    icon.Position = UDim2.new(0, 12, 0, 0)
+    icon.ZIndex = 12
+    icon.Parent = notif
+    
+    local label = Instance.new("TextLabel")
+    label.Text = text
+    label.Font = options.TextFont or Enum.Font.Gotham
+    label.TextSize = options.TextSize or 16
+    label.TextColor3 = options.TextColor or Color3.fromRGB(240, 240, 245)
+    label.BackgroundTransparency = 1
+    label.Size = UDim2.new(1, -60, 1, 0)
+    label.Position = UDim2.new(0, 60, 0, 0)
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.TextYAlignment = Enum.TextYAlignment.Center
+    label.ZIndex = 12
+    label.Parent = notif
+    
+    -- Close button (subtle "×")
+    local closeButton = Instance.new("TextButton")
+    closeButton.Text = options.CloseText or "×"
+    closeButton.Font = options.CloseFont or Enum.Font.SourceSansBold
+    closeButton.TextSize = options.CloseSize or 20
+    closeButton.TextColor3 = options.CloseColor or Color3.fromRGB(180, 180, 190)
+    closeButton.BackgroundColor3 = options.CloseBackgroundColor or Color3.fromRGB(40, 40, 45)
+    closeButton.BorderSizePixel = 0
+    closeButton.Size = UDim2.new(0, 24, 0, 24)
+    closeButton.Position = UDim2.new(1, -32, 0, 18)
+    closeButton.ZIndex = 13
+    closeButton.AutoButtonColor = false
+    closeButton.Parent = notif
+    
+    closeButton.MouseButton1Click:Connect(function()
+        notif:Destroy()
+        for i, v in ipairs(notificationQueue) do
+            if v == notif then
+                table.remove(notificationQueue, i)
+                break
+            end
+        end
+        
+        for i, n in ipairs(notificationQueue) do
+            local targetY = PADDING_Y + (i - 1) * (n.AbsoluteSize.Y + PADDING_Y)
+            tweenService:Create(n, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Position = UDim2.new(1, -PADDING_X, 0, targetY)
+            }):Play()
+        end
+        
+        if options.OnClose then
+            options.OnClose()
+        end
+    end)
+    
+    notif.Parent = notificationGui
+    table.insert(notificationQueue, notif)
+    
+    local startY = PADDING_Y + (#notificationQueue - 1) * (notif.AbsoluteSize.Y + PADDING_Y)
+    local tweenInfo = TweenInfo.new(SLIDE_DURATION, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0)
+    local tween = tweenService:Create(notif, tweenInfo, {
+        Position = UDim2.new(1, -PADDING_X, 0, startY),
+        BackgroundTransparency = 0
+    })
+    tween:Play()
+    
+    if options.OnShow then
+        options.OnShow(notif)
+    end
+    
+    spawn(function()
+        wait(duration)
+        if notif.Parent then
+            local fadeTween = tweenService:Create(notif, TweenInfo.new(0.3), {BackgroundTransparency = 1, Size = UDim2.new(0, MAX_WIDTH, 0, 50)})
+            fadeTween:Play()
+            fadeTween.Completed:Wait()
+            notif:Destroy()
+            
+            for i, v in ipairs(notificationQueue) do
+                if v == notif then
+                    table.remove(notificationQueue, i)
+                    break
+                end
+            end
+            
+            for i, n in ipairs(notificationQueue) do
+                local targetY = PADDING_Y + (i - 1) * (n.AbsoluteSize.Y + PADDING_Y)
+                tweenService:Create(n, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                    Position = UDim2.new(1, -PADDING_X, 0, targetY)
+                }):Play()
+            end
+            
+            if options.OnHide then
+                options.OnHide()
+            end
+        end
+    end)
+    
+    return notif
+end
 
 return library
