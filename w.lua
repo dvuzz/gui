@@ -1820,24 +1820,36 @@ VirtualUser:CaptureController()
 VirtualUser:ClickButton2(Vector2.new())
 end)
 
--- Container chứa các thông báo
-local notifyContainer = library:Create("Frame", {
-    Name = "NotifyContainer",
-    Position = UDim2.new(1, -20, 1, -20), -- Góc phải dưới
-    Size = UDim2.new(0, 300, 1, 0), -- Rộng 300px
-    AnchorPoint = Vector2.new(1, 1),
-    BackgroundTransparency = 1,
-    Parent = library.base -- Đảm bảo library.Init() đã chạy trước khi gọi notify
-})
-
-local notifyLayout = library:Create("UIListLayout", {
-    SortOrder = Enum.SortOrder.LayoutOrder,
-    VerticalAlignment = Enum.VerticalAlignment.Bottom,
-    Padding = UDim.new(0, 10), -- Khoảng cách giữa các thông báo
-    Parent = notifyContainer
-})
+-- --- PHẦN CODE SỬA LẠI (Dán đè lên phần cuối script cũ) ---
 
 function library:Notify(config)
+    -- Kiểm tra xem thư viện đã Init chưa
+    if not library.base then
+        warn("Vui lòng chạy library:Init() trước khi gọi Notify!")
+        return
+    end
+
+    -- Tự động tạo Container nếu chưa có (Lazy Load)
+    local notifyContainer = library.base:FindFirstChild("NotifyContainer")
+    if not notifyContainer then
+        notifyContainer = library:Create("Frame", {
+            Name = "NotifyContainer",
+            Position = UDim2.new(1, -20, 1, -20), -- Góc phải dưới
+            Size = UDim2.new(0, 300, 1, 0), -- Rộng 300px
+            AnchorPoint = Vector2.new(1, 1),
+            BackgroundTransparency = 1,
+            Parent = library.base, -- Lúc này library.base đã tồn tại
+            ClipsDescendants = false
+        })
+
+        library:Create("UIListLayout", {
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            VerticalAlignment = Enum.VerticalAlignment.Bottom,
+            Padding = UDim.new(0, 10), -- Khoảng cách giữa các thông báo
+            Parent = notifyContainer
+        })
+    end
+
     -- Cấu hình mặc định
     config = typeof(config) == "table" and config or {}
     local titleText = config.title or "Notification"
@@ -1845,7 +1857,7 @@ function library:Notify(config)
     local duration = config.duration or 5
     local image = config.image or "rbxassetid://3944703587" -- Icon chuông mặc định
 
-    -- Frame chính
+    -- Frame chính của thông báo
     local notifyFrame = library:Create("Frame", {
         Name = "NotifyFrame",
         Size = UDim2.new(1, 0, 0, 80), -- Chiều cao ban đầu
@@ -1863,7 +1875,7 @@ function library:Notify(config)
     })
     
     -- Viền trắng mỏng (Premium look)
-    library:Create("UIStroke", {
+    local stroke = library:Create("UIStroke", {
         Color = Color3.fromRGB(60, 60, 60), -- Viền xám tối
         Thickness = 1,
         Transparency = 1, -- Sẽ tween hiện lên
@@ -1938,7 +1950,7 @@ function library:Notify(config)
     -- === ANIMATION VÀO (Intro) ===
     -- 1. Tween Background + Stroke hiện lên
     tweenService:Create(notifyFrame, TweenInfo.new(0.3), {BackgroundTransparency = 0.1}):Play()
-    tweenService:Create(notifyFrame:FindFirstChild("UIStroke"), TweenInfo.new(0.3), {Transparency = 0}):Play()
+    tweenService:Create(stroke, TweenInfo.new(0.3), {Transparency = 0}):Play()
     
     -- 2. Tween Text + Icon hiện lên sau 1 chút
     delay(0.1, function()
@@ -1962,7 +1974,7 @@ function library:Notify(config)
             BackgroundTransparency = 1,
             Position = UDim2.new(0, 50, 0, 0) -- Trượt nhẹ sang phải
         }):Play()
-        tweenService:Create(notifyFrame:FindFirstChild("UIStroke"), TweenInfo.new(0.3), {Transparency = 1}):Play()
+        tweenService:Create(stroke, TweenInfo.new(0.3), {Transparency = 1}):Play()
         tweenService:Create(titleLabel, TweenInfo.new(0.2), {TextTransparency = 1}):Play()
         tweenService:Create(descLabel, TweenInfo.new(0.2), {TextTransparency = 1}):Play()
         tweenService:Create(icon, TweenInfo.new(0.2), {ImageTransparency = 1}):Play()
