@@ -529,7 +529,7 @@ local function createSlider(option, parent)
 		Parent = parent.content
 	})
 	
-	-- [ĐÃ SỬA] Chữ tiêu đề thành màu trắng sáng
+	
 	local title = library:Create("TextLabel", {
 		Position = UDim2.new(0, 10, 0, 5),
 		Size = UDim2.new(0.5, 0, 0, 20),
@@ -537,7 +537,7 @@ local function createSlider(option, parent)
 		Text = option.text,
 		TextSize = 16,
 		Font = Enum.Font.SourceSansBold,
-		TextColor3 = Color3.fromRGB(255, 255, 255), -- Màu trắng
+		TextColor3 = Color3.fromRGB(255, 255, 255), 
 		TextXAlignment = Enum.TextXAlignment.Left,
 		Parent = main
 	})
@@ -549,7 +549,7 @@ local function createSlider(option, parent)
 		Size = UDim2.new(0, 50, 0, 20),
 		BackgroundTransparency = 1,
 		Image = "rbxassetid://3570695787",
-		ImageColor3 = Color3.fromRGB(30, 30, 30), -- Giữ nguyên màu tối
+		ImageColor3 = Color3.fromRGB(30, 30, 30), 
 		ScaleType = Enum.ScaleType.Slice,
 		SliceCenter = Rect.new(100, 100, 100, 100),
 		SliceScale = 0.02,
@@ -560,7 +560,7 @@ local function createSlider(option, parent)
 		Size = UDim2.new(1, 0, 1, 0),
 		BackgroundTransparency = 1,
 		Text = option.value,
-		TextColor3 = Color3.fromRGB(255, 255, 255), -- Màu trắng
+		TextColor3 = Color3.fromRGB(255, 255, 255), 
 		TextSize = 14,
 		Font = Enum.Font.SourceSansBold,
 		Parent = valueBg
@@ -572,7 +572,7 @@ local function createSlider(option, parent)
 		Size = UDim2.new(1, -20, 0, 6),
 		BackgroundTransparency = 1,
 		Image = "rbxassetid://3570695787",
-		ImageColor3 = Color3.fromRGB(40, 40, 40), -- Nền thanh trượt màu xám tối
+		ImageColor3 = Color3.fromRGB(40, 40, 40), 
 		ScaleType = Enum.ScaleType.Slice,
 		SliceCenter = Rect.new(100, 100, 100, 100),
 		SliceScale = 0.02,
@@ -591,11 +591,11 @@ local function createSlider(option, parent)
 		Parent = sliderBg
 	})
 	
-	-- [ĐÃ SỬA] Gradient chuyển thành màu Đen/Trắng (Xám sang Trắng)
+
 	local gradient = library:Create("UIGradient", {
 		Color = ColorSequence.new{
-			ColorSequenceKeypoint.new(0, Color3.fromRGB(150, 150, 150)), -- Màu xám
-			ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))  -- Màu trắng
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(150, 150, 150)), 
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))  
 		},
 		Parent = fill
 	})
@@ -614,14 +614,14 @@ local function createSlider(option, parent)
 		Parent = fill 
 	})
 	
-	-- [ĐÃ SỬA] Ánh sáng quanh nút tròn thành màu Trắng
+	
 	local circleGlow = library:Create("ImageLabel", {
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.new(0.5, 0, 0.5, 0),
 		Size = UDim2.new(1, 8, 1, 8), 
 		BackgroundTransparency = 1,
 		Image = "rbxassetid://3570695787",
-		ImageColor3 = Color3.fromRGB(255, 255, 255), -- Đổi từ Cyan sang Trắng
+		ImageColor3 = Color3.fromRGB(255, 255, 255), 
 		ImageTransparency = 0.8,
 		ScaleType = Enum.ScaleType.Slice,
 		SliceCenter = Rect.new(100, 100, 100, 100),
@@ -690,7 +690,7 @@ local function createSlider(option, parent)
 			
 			tweenService:Create(circle, TweenInfo.new(0.2), {Size = UDim2.new(0, 18, 0, 18)}):Play()
 			tweenService:Create(circleGlow, TweenInfo.new(0.2), {ImageTransparency = 0.5}):Play()
-			-- Giữ màu background tối khi click
+		
 			tweenService:Create(valueBg, TweenInfo.new(0.2), {ImageColor3 = Color3.fromRGB(50, 50, 50)}):Play()
 		end
 	end)
