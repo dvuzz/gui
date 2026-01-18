@@ -97,7 +97,7 @@ end
 folder:AddList({
     text = "Color",
     values = {"Red", "Green", "Blue"},
-    multiselect = true,
+    multiselect = false,-- true or false
     callback = function(value)
         print("Selected color:", value)
     end,
