@@ -689,6 +689,19 @@ local function createSlider(option, parent)
 end
 
 local function createList(option, parent, holder)
+	-- [CẤU HÌNH] Kiểm tra xem có bật chế độ Multi-Select không
+	option.multiselect = option.multiselect or false
+	
+	-- Chuẩn hóa dữ liệu đầu vào cho Multi-select
+	if option.multiselect then
+		-- Nếu value chưa phải là table (ví dụ người dùng điền string mặc định), chuyển nó thành table
+		if type(option.value) == "string" and option.value ~= "" then
+			option.value = {[option.value] = true}
+		elseif type(option.value) ~= "table" then
+			option.value = {}
+		end
+	end
+
 	local valueCount = 0
 	
 	-- Main Frame
@@ -725,12 +738,12 @@ local function createList(option, parent, holder)
 		Parent = main
 	})
 	
-	-- Giá trị hiện tại
+	-- Giá trị hiển thị
 	local listvalue = library:Create("TextLabel", {
 		Position = UDim2.new(0, 12, 0, 20),
 		Size = UDim2.new(1, -40, 0, 24),
 		BackgroundTransparency = 1,
-		Text = option.value,
+		Text = "", -- Sẽ được cập nhật bởi SetValue
 		TextSize = 18,
 		Font = Enum.Font.SourceSansBold,
 		TextColor3 = Color3.fromRGB(255, 255, 255),
@@ -752,7 +765,7 @@ local function createList(option, parent, holder)
 		Parent = round
 	})
 
-	-- Phần danh sách xổ xuống (Popup)
+	-- Popup Holder
 	option.mainHolder = library:Create("ImageButton", {
 		ZIndex = 10,
 		Size = UDim2.new(0, 240, 0, 52),
@@ -767,7 +780,7 @@ local function createList(option, parent, holder)
 		Parent = library.base
 	})
 
-	-- Thanh tìm kiếm
+	-- Search Bar
 	local searchBar = library:Create("TextBox", {
 		ZIndex = 11,
 		Position = UDim2.new(0, 10, 0, 5),
@@ -784,7 +797,6 @@ local function createList(option, parent, holder)
 		Parent = option.mainHolder
 	})
 	
-	-- Đường kẻ ngang
 	local separator = library:Create("Frame", {
 		ZIndex = 11,
 		Position = UDim2.new(0, 5, 0, 35),
@@ -794,7 +806,6 @@ local function createList(option, parent, holder)
 		Parent = option.mainHolder
 	})
 
-	-- Vùng cuộn danh sách
 	local content = library:Create("ScrollingFrame", {
 		ZIndex = 11,
 		Position = UDim2.new(0, 0, 0, 40),
@@ -829,7 +840,7 @@ local function createList(option, parent, holder)
 	
 	layout.Changed:connect(updateSize)
 
-	-- Hàm Refresh list
+	-- Hàm làm mới danh sách (Xử lý Single & Multi)
 	function option:RefreshList(searchText)
 		searchText = searchText and string.lower(searchText) or ""
 		
@@ -843,7 +854,13 @@ local function createList(option, parent, holder)
 			if searchText == "" or string.find(string.lower(strValue), searchText) then
 				valueCount = valueCount + 1
 				
-				local isSelected = (strValue == option.value)
+				-- Kiểm tra trạng thái đã chọn
+				local isSelected = false
+				if option.multiselect then
+					isSelected = option.value[strValue] == true
+				else
+					isSelected = (option.value == strValue)
+				end
 				
 				local itemBtn = library:Create("TextButton", {
 					ZIndex = 12,
@@ -860,23 +877,48 @@ local function createList(option, parent, holder)
 					Parent = content
 				})
 				
+				-- Thêm biểu tượng checkmark nếu là Multi-select và đang chọn
+				if option.multiselect and isSelected then
+					local checkIcon = library:Create("ImageLabel", {
+						Position = UDim2.new(1, -25, 0.5, -6),
+						Size = UDim2.new(0, 12, 0, 12),
+						BackgroundTransparency = 1,
+						Image = "rbxassetid://4919148038", -- Icon checkmark
+						ImageColor3 = Color3.fromRGB(255, 255, 255),
+						Parent = itemBtn
+					})
+				end
+				
 				library:Create("UICorner", {CornerRadius = UDim.new(0, 4), Parent = itemBtn})
 
 				itemBtn.MouseEnter:Connect(function()
-					if not (option.value == strValue) then
+					if (option.multiselect and not option.value[strValue]) or (not option.multiselect and option.value ~= strValue) then
 						tweenService:Create(itemBtn, TweenInfo.new(0.2), {BackgroundTransparency = 0.8, TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
 					end
 				end)
 				
 				itemBtn.MouseLeave:Connect(function()
-					if not (option.value == strValue) then
+					if (option.multiselect and not option.value[strValue]) or (not option.multiselect and option.value ~= strValue) then
 						tweenService:Create(itemBtn, TweenInfo.new(0.2), {BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(200, 200, 200)}):Play()
 					end
 				end)
 
 				itemBtn.MouseButton1Click:Connect(function()
-					option:SetValue(strValue)
-					option:Close()
+					if option.multiselect then
+						-- Logic Multi: Toggle giá trị
+						local newValue = option.value
+						if newValue[strValue] then
+							newValue[strValue] = nil -- Bỏ chọn
+						else
+							newValue[strValue] = true -- Chọn
+						end
+						option:SetValue(newValue)
+						option:RefreshList(searchBar.Text) -- Refresh lại UI để cập nhật checkmark
+					else
+						-- Logic Single: Chọn và đóng
+						option:SetValue(strValue)
+						option:Close()
+					end
 				end)
 			end
 		end
@@ -887,40 +929,33 @@ local function createList(option, parent, holder)
 		option:RefreshList(searchBar.Text)
 	end)
 
-	-- Xử lý đóng mở (ĐÃ FIX LỖI)
 	local inContact
 	
 	round.InputBegan:connect(function(input)
 		if input.UserInputType == ui or input.UserInputType == Enum.UserInputType.Touch then
-			-- Đóng popup khác nếu đang mở
 			if library.activePopup and library.activePopup ~= option then
 				library.activePopup:Close()
 			end
 			
-			-- Toggle đóng/mở
 			if option.open then
 				option:Close()
 				return
 			end
 
-			-- Vị trí hiển thị
 			local position = main.AbsolutePosition
 			option.mainHolder.Position = UDim2.new(0, position.X - 5, 0, position.Y + 45)
 			
-			-- Reset trạng thái
 			option.open = true
 			option.mainHolder.Visible = true
 			
 			searchBar.Text = ""
 			option:RefreshList("") 
 			
-			-- Animation
 			option.mainHolder.ImageTransparency = 1
 			tweenService:Create(option.mainHolder, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {ImageTransparency = 0}):Play()
 			tweenService:Create(arrow, TweenInfo.new(0.3), {Rotation = 0}):Play()
 			tweenService:Create(round, TweenInfo.new(0.2), {ImageColor3 = Color3.fromRGB(60, 60, 60)}):Play()
 
-			-- [QUAN TRỌNG] Chờ 1 nhịp để tránh bị xung đột với sự kiện click toàn cục
 			wait() 
 			library.activePopup = option
 		end
@@ -943,10 +978,31 @@ local function createList(option, parent, holder)
 	end)
 	
 	function option:SetValue(value)
-		library.flags[self.flag] = tostring(value)
-		self.value = tostring(value)
-		listvalue.Text = self.value
-		self.callback(value)
+		if option.multiselect then
+			-- Logic set value cho Multi (value là table)
+			library.flags[self.flag] = value
+			self.value = value
+			
+			-- Tạo chuỗi hiển thị: "Item1, Item2, Item3"
+			local displayTable = {}
+			for _, v in ipairs(option.values) do -- Duyệt theo thứ tự gốc để hiển thị đẹp hơn
+				if value[tostring(v)] then
+					table.insert(displayTable, tostring(v))
+				end
+			end
+			
+			local displayText = table.concat(displayTable, ", ")
+			if displayText == "" then displayText = "None" end
+			
+			listvalue.Text = displayText
+			self.callback(value) -- Callback trả về table {[item]=true}
+		else
+			-- Logic set value cho Single (value là string)
+			library.flags[self.flag] = tostring(value)
+			self.value = tostring(value)
+			listvalue.Text = self.value
+			self.callback(value)
+		end
 	end
 	
 	function option:Close()
@@ -964,8 +1020,15 @@ local function createList(option, parent, holder)
 		end)
 	end
     
-    if not table.find(option.values, option.value) and #option.values > 0 then
-         option:SetValue(option.values[1])
+    -- Khởi tạo giá trị ban đầu
+    if option.multiselect then
+        option:SetValue(option.value)
+    else
+        if not table.find(option.values, option.value) and #option.values > 0 then
+             option:SetValue(option.values[1])
+        else
+             option:SetValue(option.value)
+        end
     end
 
 	return option
