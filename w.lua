@@ -1820,69 +1820,69 @@ VirtualUser:CaptureController()
 VirtualUser:ClickButton2(Vector2.new())
 end)
 
--- --- PHẦN CODE SỬA LẠI (Dán đè lên phần cuối script cũ) ---
+
 
 function library:Notify(config)
-    -- Kiểm tra xem thư viện đã Init chưa
+    
     if not library.base then
-        warn("Vui lòng chạy library:Init() trước khi gọi Notify!")
+        warn("not found library:Init()")
         return
     end
 
-    -- Tự động tạo Container nếu chưa có (Lazy Load)
+    
     local notifyContainer = library.base:FindFirstChild("NotifyContainer")
     if not notifyContainer then
         notifyContainer = library:Create("Frame", {
             Name = "NotifyContainer",
-            Position = UDim2.new(1, -20, 1, -20), -- Góc phải dưới
-            Size = UDim2.new(0, 300, 1, 0), -- Rộng 300px
+            Position = UDim2.new(1, -20, 1, -20), 
+            Size = UDim2.new(0, 300, 1, 0), 
             AnchorPoint = Vector2.new(1, 1),
             BackgroundTransparency = 1,
-            Parent = library.base, -- Lúc này library.base đã tồn tại
+            Parent = library.base, 
             ClipsDescendants = false
         })
 
         library:Create("UIListLayout", {
             SortOrder = Enum.SortOrder.LayoutOrder,
             VerticalAlignment = Enum.VerticalAlignment.Bottom,
-            Padding = UDim.new(0, 10), -- Khoảng cách giữa các thông báo
+            Padding = UDim.new(0, 10), 
             Parent = notifyContainer
         })
     end
 
-    -- Cấu hình mặc định
+    
     config = typeof(config) == "table" and config or {}
     local titleText = config.title or "Notification"
-    local descText = config.content or "No content provided."
+    local descText = config.content or "test"
     local duration = config.duration or 5
-    local image = config.image or "rbxassetid://3944703587" -- Icon chuông mặc định
+    local image = config.image or "rbxassetid://3944703587" 
 
-    -- Frame chính của thông báo
+    
     local notifyFrame = library:Create("Frame", {
         Name = "NotifyFrame",
-        Size = UDim2.new(1, 0, 0, 80), -- Chiều cao ban đầu
-        BackgroundTransparency = 1, -- Sẽ tween sau
-        BackgroundColor3 = Color3.fromRGB(15, 15, 15), -- Nền đen nhám
+        Size = UDim2.new(1, 0, 0, 80), 
+        BackgroundTransparency = 1, 
+        BackgroundColor3 = Color3.fromRGB(15, 15, 15), 
         Parent = notifyContainer,
         ClipsDescendants = true,
-        LayoutOrder = tick() -- Đảm bảo cái mới nằm dưới cùng
+        LayoutOrder = tick() 
     })
     
-    -- Bo góc
+    
     library:Create("UICorner", {
         CornerRadius = UDim.new(0, 6),
         Parent = notifyFrame
     })
     
-    -- Viền trắng mỏng (Premium look)
+    
     local stroke = library:Create("UIStroke", {
-        Color = Color3.fromRGB(60, 60, 60), -- Viền xám tối
+        Color = Color3.fromRGB(60, 60, 60), 
         Thickness = 1,
-        Transparency = 1, -- Sẽ tween hiện lên
+        Transparency = 1, 
         Parent = notifyFrame
     })
 
-    -- Icon
+    
     local icon = library:Create("ImageLabel", {
         Name = "Icon",
         Position = UDim2.new(0, 15, 0, 15),
@@ -1894,7 +1894,7 @@ function library:Notify(config)
         Parent = notifyFrame
     })
 
-    -- Tiêu đề
+    
     local titleLabel = library:Create("TextLabel", {
         Name = "Title",
         Position = UDim2.new(0, 50, 0, 15),
@@ -1909,7 +1909,7 @@ function library:Notify(config)
         Parent = notifyFrame
     })
 
-    -- Nội dung
+    
     local descLabel = library:Create("TextLabel", {
         Name = "Description",
         Position = UDim2.new(0, 50, 0, 42),
@@ -1918,7 +1918,7 @@ function library:Notify(config)
         Text = descText,
         TextSize = 13,
         Font = Enum.Font.Gotham,
-        TextColor3 = Color3.fromRGB(180, 180, 180), -- Màu xám trắng
+        TextColor3 = Color3.fromRGB(180, 180, 180), 
         TextXAlignment = Enum.TextXAlignment.Left,
         TextYAlignment = Enum.TextYAlignment.Top,
         TextWrapped = true,
@@ -1926,33 +1926,31 @@ function library:Notify(config)
         Parent = notifyFrame
     })
 
-    -- Thanh thời gian (Progress Bar)
+    
     local progressBar = library:Create("Frame", {
         Name = "Timer",
         Position = UDim2.new(0, 0, 1, -2),
-        Size = UDim2.new(0, 0, 0, 2), -- Bắt đầu từ 0
-        BackgroundColor3 = Color3.fromRGB(255, 255, 255), -- Trắng
+        Size = UDim2.new(0, 0, 0, 2), 
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255), 
         BorderSizePixel = 0,
         Parent = notifyFrame
     })
 
-    -- Nút tắt (X)
     local closeBtn = library:Create("ImageButton", {
         Position = UDim2.new(1, -25, 0, 15),
         Size = UDim2.new(0, 20, 0, 20),
         BackgroundTransparency = 1,
-        Image = "rbxassetid://6031094670",
+        Image = "rbxassetid://124357976362938",
         ImageColor3 = Color3.fromRGB(150, 150, 150),
         ImageTransparency = 1,
         Parent = notifyFrame
     })
 
-    -- === ANIMATION VÀO (Intro) ===
-    -- 1. Tween Background + Stroke hiện lên
+    
     tweenService:Create(notifyFrame, TweenInfo.new(0.3), {BackgroundTransparency = 0.1}):Play()
     tweenService:Create(stroke, TweenInfo.new(0.3), {Transparency = 0}):Play()
     
-    -- 2. Tween Text + Icon hiện lên sau 1 chút
+        
     delay(0.1, function()
         tweenService:Create(titleLabel, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
         tweenService:Create(descLabel, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
@@ -1960,19 +1958,19 @@ function library:Notify(config)
         tweenService:Create(closeBtn, TweenInfo.new(0.3), {ImageTransparency = 0}):Play()
     end)
 
-    -- 3. Hiệu ứng thanh thời gian chạy
+    
     tweenService:Create(progressBar, TweenInfo.new(duration, Enum.EasingStyle.Linear), {Size = UDim2.new(1, 0, 0, 2)}):Play()
 
-    -- Hàm đóng thông báo
+    
     local closed = false
     local function closeNotify()
         if closed then return end
         closed = true
         
-        -- Animation biến mất (Trượt sang phải + Mờ dần)
+        
         tweenService:Create(notifyFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
             BackgroundTransparency = 1,
-            Position = UDim2.new(0, 50, 0, 0) -- Trượt nhẹ sang phải
+            Position = UDim2.new(0, 50, 0, 0) 
         }):Play()
         tweenService:Create(stroke, TweenInfo.new(0.3), {Transparency = 1}):Play()
         tweenService:Create(titleLabel, TweenInfo.new(0.2), {TextTransparency = 1}):Play()
@@ -1981,16 +1979,16 @@ function library:Notify(config)
         tweenService:Create(closeBtn, TweenInfo.new(0.2), {ImageTransparency = 1}):Play()
         tweenService:Create(progressBar, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
 
-        -- Xóa UI sau khi animation xong
+        
         delay(0.4, function()
             notifyFrame:Destroy()
         end)
     end
 
-    -- Tự động đóng sau duration
+    
     delay(duration, closeNotify)
 
-    -- Sự kiện nút tắt
+    
     closeBtn.MouseButton1Click:Connect(closeNotify)
     closeBtn.MouseEnter:Connect(function()
         tweenService:Create(closeBtn, TweenInfo.new(0.2), {ImageColor3 = Color3.fromRGB(255, 255, 255)}):Play()
