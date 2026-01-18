@@ -691,7 +691,7 @@ end
 local function createList(option, parent, holder)
 	local valueCount = 0
 	
-	-- Main Frame của Dropdown
+	-- Main Frame
 	local main = library:Create("Frame", {
 		LayoutOrder = option.position,
 		Size = UDim2.new(1, 0, 0, 52),
@@ -699,7 +699,7 @@ local function createList(option, parent, holder)
 		Parent = parent.content
 	})
 	
-	-- Nền chính
+	-- Nền nút bấm
 	local round = library:Create("ImageLabel", {
 		Position = UDim2.new(0, 6, 0, 4),
 		Size = UDim2.new(1, -12, 1, -10),
@@ -725,10 +725,10 @@ local function createList(option, parent, holder)
 		Parent = main
 	})
 	
-	-- Text hiển thị giá trị hiện tại
+	-- Giá trị hiện tại
 	local listvalue = library:Create("TextLabel", {
 		Position = UDim2.new(0, 12, 0, 20),
-		Size = UDim2.new(1, -40, 0, 24), -- Chừa chỗ cho mũi tên
+		Size = UDim2.new(1, -40, 0, 24),
 		BackgroundTransparency = 1,
 		Text = option.value,
 		TextSize = 18,
@@ -739,22 +739,22 @@ local function createList(option, parent, holder)
 		Parent = main
 	})
 	
-	-- Icon mũi tên (Arrow)
+	-- Mũi tên
 	local arrow = library:Create("ImageLabel", {
 		AnchorPoint = Vector2.new(1, 0.5),
 		Position = UDim2.new(1, -12, 0.5, 0),
 		Size = UDim2.new(0, 14, 0, 14),
 		BackgroundTransparency = 1,
-		Image = "rbxassetid://4918373417", -- Icon mũi tên
+		Image = "rbxassetid://4918373417",
 		ImageColor3 = Color3.fromRGB(140, 140, 140),
-		Rotation = 180, -- Mặc định hướng xuống
+		Rotation = 180,
 		ScaleType = Enum.ScaleType.Fit,
 		Parent = round
 	})
 
-	-- Popup chứa danh sách (Dropdown content)
+	-- Phần danh sách xổ xuống (Popup)
 	option.mainHolder = library:Create("ImageButton", {
-		ZIndex = 10, -- Đảm bảo đè lên các element khác
+		ZIndex = 10,
 		Size = UDim2.new(0, 240, 0, 52),
 		BackgroundTransparency = 1,
 		Image = "rbxassetid://3570695787",
@@ -767,12 +767,12 @@ local function createList(option, parent, holder)
 		Parent = library.base
 	})
 
-	-- Thanh tìm kiếm (Search Bar)
+	-- Thanh tìm kiếm
 	local searchBar = library:Create("TextBox", {
 		ZIndex = 11,
 		Position = UDim2.new(0, 10, 0, 5),
 		Size = UDim2.new(1, -20, 0, 25),
-		BackgroundTransparency = 1, -- Giả lập input field
+		BackgroundTransparency = 1,
 		BackgroundColor3 = Color3.fromRGB(25, 25, 25),
 		Text = "",
 		PlaceholderText = "Search...",
@@ -784,7 +784,7 @@ local function createList(option, parent, holder)
 		Parent = option.mainHolder
 	})
 	
-	-- Line ngăn cách search và list
+	-- Đường kẻ ngang
 	local separator = library:Create("Frame", {
 		ZIndex = 11,
 		Position = UDim2.new(0, 5, 0, 35),
@@ -794,9 +794,10 @@ local function createList(option, parent, holder)
 		Parent = option.mainHolder
 	})
 
+	-- Vùng cuộn danh sách
 	local content = library:Create("ScrollingFrame", {
 		ZIndex = 11,
-		Position = UDim2.new(0, 0, 0, 40), -- Bắt đầu sau thanh search
+		Position = UDim2.new(0, 0, 0, 40),
 		Size = UDim2.new(1, 0, 1, -45),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
@@ -819,21 +820,19 @@ local function createList(option, parent, holder)
 		Parent = content
 	})
 	
-	-- Cập nhật kích thước popup khi list thay đổi
 	local function updateSize()
 		local contentHeight = layout.AbsoluteContentSize.Y
-		local totalHeight = math.clamp(contentHeight + 45, 50, 200) -- Max height 200
+		local totalHeight = math.clamp(contentHeight + 45, 50, 200)
 		option.mainHolder.Size = UDim2.new(0, 240, 0, totalHeight)
 		content.CanvasSize = UDim2.new(0, 0, 0, contentHeight + 5)
 	end
 	
 	layout.Changed:connect(updateSize)
 
-	-- Hàm làm mới danh sách (Hỗ trợ Search)
+	-- Hàm Refresh list
 	function option:RefreshList(searchText)
 		searchText = searchText and string.lower(searchText) or ""
 		
-		-- Xóa các item cũ
 		for _, item in ipairs(content:GetChildren()) do
 			if item:IsA("TextButton") then item:Destroy() end
 		end
@@ -850,7 +849,7 @@ local function createList(option, parent, holder)
 					ZIndex = 12,
 					Size = UDim2.new(1, 0, 0, 25),
 					BackgroundTransparency = isSelected and 0.5 or 1,
-					BackgroundColor3 = Color3.fromRGB(60, 60, 60), -- Màu khi chọn
+					BackgroundColor3 = Color3.fromRGB(60, 60, 60),
 					BorderSizePixel = 0,
 					Text = "  " .. strValue,
 					TextSize = 14,
@@ -861,10 +860,8 @@ local function createList(option, parent, holder)
 					Parent = content
 				})
 				
-				-- Bo tròn nhẹ cho item
 				library:Create("UICorner", {CornerRadius = UDim.new(0, 4), Parent = itemBtn})
 
-				-- Hover Effect
 				itemBtn.MouseEnter:Connect(function()
 					if not (option.value == strValue) then
 						tweenService:Create(itemBtn, TweenInfo.new(0.2), {BackgroundTransparency = 0.8, TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
@@ -886,44 +883,46 @@ local function createList(option, parent, holder)
 		updateSize()
 	end
 
-	-- Xử lý sự kiện Search
 	searchBar:GetPropertyChangedSignal("Text"):Connect(function()
 		option:RefreshList(searchBar.Text)
 	end)
 
-	-- Xử lý đóng mở
+	-- Xử lý đóng mở (ĐÃ FIX LỖI)
 	local inContact
 	
 	round.InputBegan:connect(function(input)
 		if input.UserInputType == ui or input.UserInputType == Enum.UserInputType.Touch then
+			-- Đóng popup khác nếu đang mở
 			if library.activePopup and library.activePopup ~= option then
 				library.activePopup:Close()
 			end
 			
+			-- Toggle đóng/mở
 			if option.open then
 				option:Close()
 				return
 			end
 
+			-- Vị trí hiển thị
 			local position = main.AbsolutePosition
-			option.mainHolder.Position = UDim2.new(0, position.X - 5, 0, position.Y + 45) -- Xuất hiện ngay dưới
+			option.mainHolder.Position = UDim2.new(0, position.X - 5, 0, position.Y + 45)
+			
+			-- Reset trạng thái
 			option.open = true
 			option.mainHolder.Visible = true
-			library.activePopup = option
 			
-			-- Reset Search
 			searchBar.Text = ""
 			option:RefreshList("") 
 			
-			-- Animation mở
+			-- Animation
 			option.mainHolder.ImageTransparency = 1
 			tweenService:Create(option.mainHolder, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {ImageTransparency = 0}):Play()
-			
-			-- Animation xoay mũi tên lên
 			tweenService:Create(arrow, TweenInfo.new(0.3), {Rotation = 0}):Play()
-			
-			-- Highlight viền
 			tweenService:Create(round, TweenInfo.new(0.2), {ImageColor3 = Color3.fromRGB(60, 60, 60)}):Play()
+
+			-- [QUAN TRỌNG] Chờ 1 nhịp để tránh bị xung đột với sự kiện click toàn cục
+			wait() 
+			library.activePopup = option
 		end
 		
 		if input.UserInputType == Enum.UserInputType.MouseMovement then
@@ -954,13 +953,8 @@ local function createList(option, parent, holder)
 		library.activePopup = nil
 		self.open = false
 		
-		-- Animation đóng
 		tweenService:Create(self.mainHolder, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {ImageTransparency = 1}):Play()
-		
-		-- Xoay mũi tên xuống
 		tweenService:Create(arrow, TweenInfo.new(0.3), {Rotation = 180}):Play()
-		
-		-- Trả màu viền
 		tweenService:Create(round, TweenInfo.new(0.2), {ImageColor3 = Color3.fromRGB(40, 40, 40)}):Play()
 
 		delay(0.2, function()
@@ -970,7 +964,6 @@ local function createList(option, parent, holder)
 		end)
 	end
     
-    -- Khởi tạo lần đầu
     if not table.find(option.values, option.value) and #option.values > 0 then
          option:SetValue(option.values[1])
     end
