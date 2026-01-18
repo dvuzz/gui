@@ -529,59 +529,27 @@ local function createSlider(option, parent)
 		Parent = parent.content
 	})
 	
+	-- Tiêu đề Slider
 	local title = library:Create("TextLabel", {
-		Position = UDim2.new(0, 0, 0, 4),
-		Size = UDim2.new(1, 0, 0, 20),
+		Position = UDim2.new(0, 10, 0, 5),
+		Size = UDim2.new(0.5, 0, 0, 20),
 		BackgroundTransparency = 1,
-		Text = " " .. option.text,
-		TextSize = 17,
-		Font = Enum.Font.SourceSans,
-		TextColor3 = Color3.fromRGB(255, 255, 255),
+		Text = option.text,
+		TextSize = 16,
+		Font = Enum.Font.SourceSansBold,
+		TextColor3 = Color3.fromRGB(230, 230, 230),
 		TextXAlignment = Enum.TextXAlignment.Left,
 		Parent = main
 	})
 	
-	local slider = library:Create("ImageLabel", {
-		Position = UDim2.new(0, 10, 0, 34),
-		Size = UDim2.new(1, -20, 0, 5),
+	-- Ô nhập giá trị (TextBox) nằm bên phải
+	local valueBg = library:Create("ImageLabel", {
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -10, 0, 5),
+		Size = UDim2.new(0, 50, 0, 20),
 		BackgroundTransparency = 1,
 		Image = "rbxassetid://3570695787",
 		ImageColor3 = Color3.fromRGB(30, 30, 30),
-		ScaleType = Enum.ScaleType.Slice,
-		SliceCenter = Rect.new(100, 100, 100, 100),
-		SliceScale = 0.02,
-		Parent = main
-	})
-	
-	local fill = library:Create("ImageLabel", {
-		BackgroundTransparency = 1,
-		Image = "rbxassetid://3570695787",
-		ImageColor3 = Color3.fromRGB(60, 60, 60),
-		ScaleType = Enum.ScaleType.Slice,
-		SliceCenter = Rect.new(100, 100, 100, 100),
-		SliceScale = 0.02,
-		Parent = slider
-	})
-	
-	local circle = library:Create("ImageLabel", {
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.new((option.value - option.min) / (option.max - option.min), 0, 0.5, 0),
-		SizeConstraint = Enum.SizeConstraint.RelativeYY,
-		BackgroundTransparency = 1,
-		Image = "rbxassetid://3570695787",
-		ImageColor3 = Color3.fromRGB(60, 60, 60),
-		ScaleType = Enum.ScaleType.Slice,
-		SliceCenter = Rect.new(100, 100, 100, 100),
-		SliceScale = 1,
-		Parent = slider
-	})
-	
-	local valueRound = library:Create("ImageLabel", {
-		Position = UDim2.new(1, -6, 0, 4),
-		Size = UDim2.new(0, -60, 0, 18),
-		BackgroundTransparency = 1,
-		Image = "rbxassetid://3570695787",
-		ImageColor3 = Color3.fromRGB(40, 40, 40),
 		ScaleType = Enum.ScaleType.Slice,
 		SliceCenter = Rect.new(100, 100, 100, 100),
 		SliceScale = 0.02,
@@ -592,99 +560,162 @@ local function createSlider(option, parent)
 		Size = UDim2.new(1, 0, 1, 0),
 		BackgroundTransparency = 1,
 		Text = option.value,
-		TextColor3 = Color3.fromRGB(235, 235, 235),
-		TextSize = 15,
-		TextWrapped = true,
-		Font = Enum.Font.SourceSans,
-		Parent = valueRound
+		TextColor3 = Color3.fromRGB(255, 255, 255),
+		TextSize = 14,
+		Font = Enum.Font.SourceSansBold,
+		Parent = valueBg
+	})
+
+	-- Thanh nền Slider (Background)
+	local sliderBg = library:Create("ImageLabel", {
+		Position = UDim2.new(0, 10, 0, 35),
+		Size = UDim2.new(1, -20, 0, 6),
+		BackgroundTransparency = 1,
+		Image = "rbxassetid://3570695787",
+		ImageColor3 = Color3.fromRGB(40, 40, 40),
+		ScaleType = Enum.ScaleType.Slice,
+		SliceCenter = Rect.new(100, 100, 100, 100),
+		SliceScale = 0.02,
+		Parent = main
 	})
 	
-	if option.min >= 0 then
-		fill.Size = UDim2.new((option.value - option.min) / (option.max - option.min), 0, 1, 0)
-	else
-		fill.Position = UDim2.new((0 - option.min) / (option.max - option.min), 0, 0, 0)
-		fill.Size = UDim2.new(option.value / (option.max - option.min), 0, 1, 0)
+	-- Thanh hiển thị mức độ (Fill)
+	local fill = library:Create("ImageLabel", {
+		Size = UDim2.new(0, 0, 1, 0),
+		BackgroundTransparency = 1,
+		Image = "rbxassetid://3570695787",
+		ImageColor3 = Color3.fromRGB(255, 255, 255), -- Màu gốc trắng để đè Gradient
+		ScaleType = Enum.ScaleType.Slice,
+		SliceCenter = Rect.new(100, 100, 100, 100),
+		SliceScale = 0.02,
+		Parent = sliderBg
+	})
+	
+	-- Hiệu ứng Gradient cho thanh Fill (Màu xanh dương cyan)
+	local gradient = library:Create("UIGradient", {
+		Color = ColorSequence.new{
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(45, 125, 220)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(60, 220, 235))
+		},
+		Parent = fill
+	})
+
+	-- Nút kéo (Knob/Circle)
+	local circle = library:Create("ImageLabel", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(0, 0, 0.5, 0),
+		Size = UDim2.new(0, 14, 0, 14),
+		BackgroundTransparency = 1,
+		Image = "rbxassetid://3570695787", -- Dùng hình tròn
+		ImageColor3 = Color3.fromRGB(255, 255, 255),
+		ScaleType = Enum.ScaleType.Slice,
+		SliceCenter = Rect.new(100, 100, 100, 100),
+		SliceScale = 1, -- Bo tròn hoàn toàn
+		Parent = fill -- Đặt trong Fill để nó đi theo thanh Fill
+	})
+	
+	-- Tạo viền sáng nhẹ (Glow) cho nút kéo
+	local circleGlow = library:Create("ImageLabel", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(0.5, 0, 0.5, 0),
+		Size = UDim2.new(1, 8, 1, 8), -- To hơn nút gốc
+		BackgroundTransparency = 1,
+		Image = "rbxassetid://3570695787",
+		ImageColor3 = Color3.fromRGB(60, 220, 235),
+		ImageTransparency = 0.8,
+		ScaleType = Enum.ScaleType.Slice,
+		SliceCenter = Rect.new(100, 100, 100, 100),
+		SliceScale = 1,
+		Parent = circle
+	})
+	
+	-- Logic cập nhật Slider
+	local dragging = false
+	
+	local function updateSlider(input)
+		local sizeX = sliderBg.AbsoluteSize.X
+		local positionX = sliderBg.AbsolutePosition.X
+		
+		-- Tính phần trăm (0 -> 1)
+		local percent = math.clamp((input.Position.X - positionX) / sizeX, 0, 1)
+		
+		-- Tính giá trị thực tế
+		local value = option.min + (option.max - option.min) * percent
+		value = round(value, option.float) -- Làm tròn số
+		
+		option:SetValue(value)
 	end
 	
-	local sliding
-	local inContact
-	main.InputBegan:connect(function(input)
-		if input.UserInputType == ui then
-			tweenService:Create(fill, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageColor3 = Color3.fromRGB(255, 255, 255)}):Play()
-			tweenService:Create(circle, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(3.5, 0, 3.5, 0), ImageColor3 = Color3.fromRGB(255, 255, 255)}):Play()
-			sliding = true
-			option:SetValue(option.min + ((input.Position.X - slider.AbsolutePosition.X) / slider.AbsoluteSize.X) * (option.max - option.min))
-		elseif input.UserInputType == Enum.UserInputType.Touch then
-			tweenService:Create(fill, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageColor3 = Color3.fromRGB(255, 255, 255)}):Play()
-			tweenService:Create(circle, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(3.5, 0, 3.5, 0), ImageColor3 = Color3.fromRGB(255, 255, 255)}):Play()
-			sliding = true
-			option:SetValue(option.min + ((input.Position.X - slider.AbsolutePosition.X) / slider.AbsoluteSize.X) * (option.max - option.min))
-		end
-		if input.UserInputType == Enum.UserInputType.MouseMovement then
-			inContact = true
-			if not sliding then
-				tweenService:Create(fill, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageColor3 = Color3.fromRGB(100, 100, 100)}):Play()
-				tweenService:Create(circle, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(2.8, 0, 2.8, 0), ImageColor3 = Color3.fromRGB(100, 100, 100)}):Play()
-			end
-		end
-	end)
-	
-	inputService.InputChanged:connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseMovement and sliding then
-			option:SetValue(option.min + ((input.Position.X - slider.AbsolutePosition.X) / slider.AbsoluteSize.X) * (option.max - option.min))
-		end
-	end)
-
-	main.InputEnded:connect(function(input)
-		if input.UserInputType == ui then
-			sliding = false
-			if inContact then
-				tweenService:Create(fill, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageColor3 = Color3.fromRGB(100, 100, 100)}):Play()
-				tweenService:Create(circle, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(2.8, 0, 2.8, 0), ImageColor3 = Color3.fromRGB(100, 100, 100)}):Play()
-			else
-				tweenService:Create(fill, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageColor3 = Color3.fromRGB(60, 60, 60)}):Play()
-				tweenService:Create(circle, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, 0, 0, 0), ImageColor3 = Color3.fromRGB(60, 60, 60)}):Play()
-			end
-		elseif input.UserInputType == Enum.UserInputType.Touch then
-			sliding = false
-			if inContact then
-				tweenService:Create(fill, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageColor3 = Color3.fromRGB(100, 100, 100)}):Play()
-				tweenService:Create(circle, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(2.8, 0, 2.8, 0), ImageColor3 = Color3.fromRGB(100, 100, 100)}):Play()
-			else
-				tweenService:Create(fill, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageColor3 = Color3.fromRGB(60, 60, 60)}):Play()
-				tweenService:Create(circle, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, 0, 0, 0), ImageColor3 = Color3.fromRGB(60, 60, 60)}):Play()
-			end
-		end
-		if input.UserInputType == Enum.UserInputType.MouseMovement then
-			inContact = false
-			inputvalue:ReleaseFocus()
-			if not sliding then
-				tweenService:Create(fill, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageColor3 = Color3.fromRGB(60, 60, 60)}):Play()
-				tweenService:Create(circle, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, 0, 0, 0), ImageColor3 = Color3.fromRGB(60, 60, 60)}):Play()
-			end
-		end
-	end)
-
-	inputvalue.FocusLost:connect(function()
-		tweenService:Create(circle, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, 0, 0, 0), ImageColor3 = Color3.fromRGB(60, 60, 60)}):Play()
-		option:SetValue(tonumber(inputvalue.Text) or option.value)
-	end)
-
+	-- Hàm Set Value (Cập nhật UI & Gọi callback)
 	function option:SetValue(value)
-		value = round(value, option.float)
+		-- Clamp giá trị nằm trong min/max
 		value = math.clamp(value, self.min, self.max)
-		circle:TweenPosition(UDim2.new((value - self.min) / (self.max - self.min), 0, 0.5, 0), "Out", "Quad", 0.1, true)
-		if self.min >= 0 then
-			fill:TweenSize(UDim2.new((value - self.min) / (self.max - self.min), 0, 1, 0), "Out", "Quad", 0.1, true)
-		else
-			fill:TweenPosition(UDim2.new((0 - self.min) / (self.max - self.min), 0, 0, 0), "Out", "Quad", 0.1, true)
-			fill:TweenSize(UDim2.new(value / (self.max - self.min), 0, 1, 0), "Out", "Quad", 0.1, true)
-		end
-		library.flags[self.flag] = value
-		self.value = value
-		inputvalue.Text = value
-		self.callback(value)
+		
+		-- Làm tròn lần nữa cho chắc
+		local roundedValue = round(value, option.float)
+		
+		-- Tính lại phần trăm để hiển thị UI
+		local percent = (roundedValue - self.min) / (self.max - self.min)
+		
+		-- Animation mượt cho thanh Fill
+		tweenService:Create(fill, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Size = UDim2.new(percent, 0, 1, 0)
+		}):Play()
+		
+		-- Vì nút circle nằm trong fill, ta set vị trí nó ở cuối thanh fill
+		-- Tuy nhiên, để chính xác ta nên set vị trí circle theo sliderBg thì dễ hơn, 
+		-- nhưng ở trên ta parent circle vào fill.
+		-- Chỉnh lại: Parent circle vào fill thì Position X luôn là 1 (tức là 100% của fill)
+		circle.Position = UDim2.new(1, 0, 0.5, 0)
+
+		library.flags[self.flag] = roundedValue
+		self.value = roundedValue
+		inputvalue.Text = tostring(roundedValue)
+		self.callback(roundedValue)
 	end
+
+	-- Sự kiện nhập số vào TextBox
+	inputvalue.FocusLost:connect(function()
+		local num = tonumber(inputvalue.Text)
+		if num then
+			option:SetValue(num)
+		else
+			inputvalue.Text = tostring(option.value)
+		end
+	end)
+
+	-- Sự kiện kéo chuột
+	sliderBg.InputBegan:connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			updateSlider(input)
+			
+			-- Animation phóng to nút khi kéo
+			tweenService:Create(circle, TweenInfo.new(0.2), {Size = UDim2.new(0, 18, 0, 18)}):Play()
+			tweenService:Create(circleGlow, TweenInfo.new(0.2), {ImageTransparency = 0.5}):Play()
+			tweenService:Create(valueBg, TweenInfo.new(0.2), {ImageColor3 = Color3.fromRGB(50, 50, 50)}):Play()
+		end
+	end)
+
+	sliderBg.InputEnded:connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = false
+			
+			-- Animation thu nhỏ nút khi thả
+			tweenService:Create(circle, TweenInfo.new(0.2), {Size = UDim2.new(0, 14, 0, 14)}):Play()
+			tweenService:Create(circleGlow, TweenInfo.new(0.2), {ImageTransparency = 0.8}):Play()
+			tweenService:Create(valueBg, TweenInfo.new(0.2), {ImageColor3 = Color3.fromRGB(30, 30, 30)}):Play()
+		end
+	end)
+
+	inputService.InputChanged:connect(function(input)
+		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+			updateSlider(input)
+		end
+	end)
+
+    -- Khởi tạo giá trị ban đầu
+	option:SetValue(option.value)
 end
 
 local function createList(option, parent, holder)
