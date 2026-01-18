@@ -1,15 +1,14 @@
 local library = {flags = {}, windows = {}, open = true}
 
---Services
 local runService = game:GetService"RunService"
 local tweenService = game:GetService"TweenService"
 local textService = game:GetService"TextService"
 local inputService = game:GetService"UserInputService"
 local ui = Enum.UserInputType.MouseButton1
---Locals
+
 local dragging, dragInput, dragStart, startPos, dragObject
 
---Functions
+
 local function round(num, bracket)
 	bracket = bracket or 1
 	local a = math.floor(num/bracket + (math.sign(num) * 0.5)) * bracket
@@ -33,7 +32,7 @@ local function update(input)
 	dragObject:TweenPosition(UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, yPos), "Out", "Quint", 0.1, true)
 end
  
---From: https://devforum.roblox.com/t/how-to-create-a-simple-rainbow-effect-using-tweenService/221849/2
+
 local chromaColor
 local rainbowTime = 5
 spawn(function()
@@ -689,12 +688,11 @@ local function createSlider(option, parent)
 end
 
 local function createList(option, parent, holder)
-	-- [CẤU HÌNH] Kiểm tra xem có bật chế độ Multi-Select không
+	
 	option.multiselect = option.multiselect or false
 	
-	-- Chuẩn hóa dữ liệu đầu vào cho Multi-select
+
 	if option.multiselect then
-		-- Nếu value chưa phải là table (ví dụ người dùng điền string mặc định), chuyển nó thành table
 		if type(option.value) == "string" and option.value ~= "" then
 			option.value = {[option.value] = true}
 		elseif type(option.value) ~= "table" then
@@ -704,7 +702,7 @@ local function createList(option, parent, holder)
 
 	local valueCount = 0
 	
-	-- Main Frame
+
 	local main = library:Create("Frame", {
 		LayoutOrder = option.position,
 		Size = UDim2.new(1, 0, 0, 52),
@@ -712,7 +710,7 @@ local function createList(option, parent, holder)
 		Parent = parent.content
 	})
 	
-	-- Nền nút bấm
+
 	local round = library:Create("ImageLabel", {
 		Position = UDim2.new(0, 6, 0, 4),
 		Size = UDim2.new(1, -12, 1, -10),
@@ -725,7 +723,7 @@ local function createList(option, parent, holder)
 		Parent = main
 	})
 	
-	-- Tiêu đề
+
 	local title = library:Create("TextLabel", {
 		Position = UDim2.new(0, 12, 0, 8),
 		Size = UDim2.new(1, -24, 0, 14),
@@ -738,12 +736,12 @@ local function createList(option, parent, holder)
 		Parent = main
 	})
 	
-	-- Giá trị hiển thị
+	
 	local listvalue = library:Create("TextLabel", {
 		Position = UDim2.new(0, 12, 0, 20),
 		Size = UDim2.new(1, -40, 0, 24),
 		BackgroundTransparency = 1,
-		Text = "", -- Sẽ được cập nhật bởi SetValue
+		Text = "", 
 		TextSize = 18,
 		Font = Enum.Font.SourceSansBold,
 		TextColor3 = Color3.fromRGB(255, 255, 255),
@@ -752,7 +750,7 @@ local function createList(option, parent, holder)
 		Parent = main
 	})
 	
-	-- Mũi tên
+
 	local arrow = library:Create("ImageLabel", {
 		AnchorPoint = Vector2.new(1, 0.5),
 		Position = UDim2.new(1, -12, 0.5, 0),
@@ -760,12 +758,12 @@ local function createList(option, parent, holder)
 		BackgroundTransparency = 1,
 		Image = "rbxassetid://4918373417",
 		ImageColor3 = Color3.fromRGB(140, 140, 140),
-		Rotation = 180,
+		Rotation = -90, 
 		ScaleType = Enum.ScaleType.Fit,
 		Parent = round
 	})
 
-	-- Popup Holder
+	
 	option.mainHolder = library:Create("ImageButton", {
 		ZIndex = 10,
 		Size = UDim2.new(0, 240, 0, 52),
@@ -780,7 +778,7 @@ local function createList(option, parent, holder)
 		Parent = library.base
 	})
 
-	-- Search Bar
+	
 	local searchBar = library:Create("TextBox", {
 		ZIndex = 11,
 		Position = UDim2.new(0, 10, 0, 5),
@@ -840,7 +838,6 @@ local function createList(option, parent, holder)
 	
 	layout.Changed:connect(updateSize)
 
-	-- Hàm làm mới danh sách (Xử lý Single & Multi)
 	function option:RefreshList(searchText)
 		searchText = searchText and string.lower(searchText) or ""
 		
@@ -854,7 +851,6 @@ local function createList(option, parent, holder)
 			if searchText == "" or string.find(string.lower(strValue), searchText) then
 				valueCount = valueCount + 1
 				
-				-- Kiểm tra trạng thái đã chọn
 				local isSelected = false
 				if option.multiselect then
 					isSelected = option.value[strValue] == true
@@ -877,13 +873,12 @@ local function createList(option, parent, holder)
 					Parent = content
 				})
 				
-				-- Thêm biểu tượng checkmark nếu là Multi-select và đang chọn
 				if option.multiselect and isSelected then
-					local checkIcon = library:Create("ImageLabel", {
+					library:Create("ImageLabel", {
 						Position = UDim2.new(1, -25, 0.5, -6),
 						Size = UDim2.new(0, 12, 0, 12),
 						BackgroundTransparency = 1,
-						Image = "rbxassetid://4919148038", -- Icon checkmark
+						Image = "rbxassetid://4919148038",
 						ImageColor3 = Color3.fromRGB(255, 255, 255),
 						Parent = itemBtn
 					})
@@ -905,17 +900,15 @@ local function createList(option, parent, holder)
 
 				itemBtn.MouseButton1Click:Connect(function()
 					if option.multiselect then
-						-- Logic Multi: Toggle giá trị
 						local newValue = option.value
 						if newValue[strValue] then
-							newValue[strValue] = nil -- Bỏ chọn
+							newValue[strValue] = nil
 						else
-							newValue[strValue] = true -- Chọn
+							newValue[strValue] = true
 						end
 						option:SetValue(newValue)
-						option:RefreshList(searchBar.Text) -- Refresh lại UI để cập nhật checkmark
+						option:RefreshList(searchBar.Text)
 					else
-						-- Logic Single: Chọn và đóng
 						option:SetValue(strValue)
 						option:Close()
 					end
@@ -929,6 +922,7 @@ local function createList(option, parent, holder)
 		option:RefreshList(searchBar.Text)
 	end)
 
+	
 	local inContact
 	
 	round.InputBegan:connect(function(input)
@@ -943,7 +937,10 @@ local function createList(option, parent, holder)
 			end
 
 			local position = main.AbsolutePosition
-			option.mainHolder.Position = UDim2.new(0, position.X - 5, 0, position.Y + 45)
+			local mainSize = main.AbsoluteSize 
+			
+			
+			option.mainHolder.Position = UDim2.new(0, position.X + mainSize.X + 5, 0, position.Y)
 			
 			option.open = true
 			option.mainHolder.Visible = true
@@ -951,8 +948,11 @@ local function createList(option, parent, holder)
 			searchBar.Text = ""
 			option:RefreshList("") 
 			
+			
 			option.mainHolder.ImageTransparency = 1
 			tweenService:Create(option.mainHolder, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {ImageTransparency = 0}):Play()
+			
+			
 			tweenService:Create(arrow, TweenInfo.new(0.3), {Rotation = 0}):Play()
 			tweenService:Create(round, TweenInfo.new(0.2), {ImageColor3 = Color3.fromRGB(60, 60, 60)}):Play()
 
@@ -979,13 +979,11 @@ local function createList(option, parent, holder)
 	
 	function option:SetValue(value)
 		if option.multiselect then
-			-- Logic set value cho Multi (value là table)
 			library.flags[self.flag] = value
 			self.value = value
 			
-			-- Tạo chuỗi hiển thị: "Item1, Item2, Item3"
 			local displayTable = {}
-			for _, v in ipairs(option.values) do -- Duyệt theo thứ tự gốc để hiển thị đẹp hơn
+			for _, v in ipairs(option.values) do
 				if value[tostring(v)] then
 					table.insert(displayTable, tostring(v))
 				end
@@ -995,9 +993,8 @@ local function createList(option, parent, holder)
 			if displayText == "" then displayText = "None" end
 			
 			listvalue.Text = displayText
-			self.callback(value) -- Callback trả về table {[item]=true}
+			self.callback(value)
 		else
-			-- Logic set value cho Single (value là string)
 			library.flags[self.flag] = tostring(value)
 			self.value = tostring(value)
 			listvalue.Text = self.value
@@ -1010,7 +1007,9 @@ local function createList(option, parent, holder)
 		self.open = false
 		
 		tweenService:Create(self.mainHolder, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {ImageTransparency = 1}):Play()
-		tweenService:Create(arrow, TweenInfo.new(0.3), {Rotation = 180}):Play()
+		
+	
+		tweenService:Create(arrow, TweenInfo.new(0.3), {Rotation = -90}):Play()
 		tweenService:Create(round, TweenInfo.new(0.2), {ImageColor3 = Color3.fromRGB(40, 40, 40)}):Play()
 
 		delay(0.2, function()
@@ -1020,7 +1019,6 @@ local function createList(option, parent, holder)
 		end)
 	end
     
-    -- Khởi tạo giá trị ban đầu
     if option.multiselect then
         option:SetValue(option.value)
     else
@@ -1729,7 +1727,7 @@ function library:Init()
 	end
 	self.base.Parent = game:GetService"CoreGui"
 	self.base.ResetOnSpawn = true
-	self.base.Name = "ToraScript"
+	self.base.Name = "vuz"
 	
 	
 	for _, window in next, self.windows do
