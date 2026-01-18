@@ -110,6 +110,20 @@ folder:AddList({
 
 
 
+### Adding Notification
+```lua
+library:Notify({
+    title = "test",
+    content = "test",
+    duration = 5,
+    image = "rbxassetid://id" 
+})
+```
+
+
+
+
+
 ### Adding Bind
 ```lua
 folder:AddBind({
