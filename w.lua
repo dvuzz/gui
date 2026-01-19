@@ -584,7 +584,7 @@ function createToggle(option, parent)
 
 	
 	local switchBg = library:Create("Frame", {
-		table.insert(library.registry.toggles, switchBg)
+		-- table.insert đã được dời xuống dưới
 		AnchorPoint = Vector2.new(1, 0.5),
 		Position = UDim2.new(1, -10, 0.5, 0),
 		Size = UDim2.new(0, 44, 0, 22),
@@ -592,6 +592,9 @@ function createToggle(option, parent)
 		BorderSizePixel = 0,
 		Parent = main
 	})
+    
+    -- [FIX] Đăng ký toggle vào registry để đổi màu sau này
+    table.insert(library.registry.toggles, switchBg)
 
 	library:Create("UICorner", {
 		CornerRadius = UDim.new(1, 0), 
@@ -632,9 +635,8 @@ function createToggle(option, parent)
 		local targetColor = bool and (self.onColor or library.theme.accent) or self.offColor
 		
 		if library.theme.auto_save then
-    library:SaveConfig() 
-
-end
+            library:SaveConfig() 
+        end
 		
 		tweenService:Create(knob, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = targetPos}):Play()
 		tweenService:Create(switchBg, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = targetColor}):Play()
@@ -2301,13 +2303,13 @@ function library:Init()
 	elseif gethui then
 		gethui(self.base)
 	else
-		game:GetService"Players".LocalPlayer:Kick("Error: protect_gui function not found")
-		return
+		-- Fallback if no protection (safe for some executors)
+        self.base.Parent = game:GetService("CoreGui")
 	end
-	self.base.Parent = game:GetService"CoreGui"
+    
+    if not self.base.Parent then self.base.Parent = game:GetService("CoreGui") end
 	self.base.ResetOnSpawn = true
 	self.base.Name = "vuz"
-	
 	
 	for _, window in next, self.windows do
 		if window.canInit and not window.init then
@@ -2316,8 +2318,14 @@ function library:Init()
 			loadOptions(window)
 		end
 	end
+
+    -- [FIX] LoadConfig nằm bên trong hàm Init
+    self:LoadConfig() 
+
 	return self.base
 end
+
+-- [FIX] Đã xóa đoạn code lặp lại bị dư thừa ở đây
 
 function library:Close()
 	if typeof(self.base) ~= "Instance" then end
@@ -2370,20 +2378,6 @@ game:service('Players').LocalPlayer.Idled:connect(function()
 VirtualUser:CaptureController()
 VirtualUser:ClickButton2(Vector2.new())
 end)
-
-    for _, window in next, self.windows do
-        if window.canInit and not window.init then
-            window.init = true
-            createOptionHolder(window.title, self.base, window)
-            loadOptions(window)
-        end
-    end
-    
-    self:LoadConfig() -- [NEW] Load cấu hình khi mở GUI
-    return self.base
-end
-
-
 
 function library:Notify(config)
     
