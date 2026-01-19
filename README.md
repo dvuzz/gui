@@ -64,7 +64,13 @@ folder:AddLabel({
 
 ```
 
-
+### Adding paragraph
+```lua
+folder:AddParagraph({
+    title = "test",
+    content = "hello"
+})
+```
 
 
 
