@@ -191,25 +191,161 @@ local function createOptionHolder(holderTitle, parent, parentTable, subHolder)
 	
 	return parentTable
 end
+
+local function createParagraph(option, parent)
+    local main = library:Create("Frame", {
+        LayoutOrder = option.position,
+        Size = UDim2.new(1, 0, 0, 0), -- Chiều cao sẽ tự tính toán
+        BackgroundTransparency = 1,
+        Parent = parent.content
+    })
+
+    local title = library:Create("TextLabel", {
+        Position = UDim2.new(0, 10, 0, 5),
+        Size = UDim2.new(1, -20, 0, 20),
+        BackgroundTransparency = 1,
+        Text = option.title,
+        TextSize = 16,
+        Font = Enum.Font.GothamBold,
+        TextColor3 = Color3.fromRGB(230, 230, 230),
+        TextXAlignment = Enum.TextXAlignment.Left,
+        RichText = true,
+        Parent = main
+    })
+
+    local content = library:Create("TextLabel", {
+        Position = UDim2.new(0, 10, 0, 25),
+        Size = UDim2.new(1, -20, 0, 0),
+        BackgroundTransparency = 1,
+        Text = option.content,
+        TextSize = 14,
+        Font = Enum.Font.Gotham,
+        TextColor3 = Color3.fromRGB(150, 150, 150),
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextWrapped = true,
+        RichText = true,
+        Parent = main
+    })
+
+    -- Tự động chỉnh chiều cao frame dựa trên độ dài văn bản
+    content.AutomaticSize = Enum.AutomaticSize.Y
+    
+    -- Cập nhật lại size của Main Frame sau khi render text
+    runService.RenderStepped:Connect(function()
+        main.Size = UDim2.new(1, 0, 0, content.AbsoluteSize.Y + 35)
+    end)
+    
+    function option:SetText(newTitle, newContent)
+        title.Text = newTitle or title.Text
+        content.Text = newContent or content.Text
+    end
+end
 	
 local function createLabel(option, parent)
-	local main = library:Create("TextLabel", {
-		LayoutOrder = option.position,
-		Size = UDim2.new(1, 0, 0, 26),
-		BackgroundTransparency = 1,
-		Text = " " .. option.text,
-		TextSize = 17,
-		Font = Enum.Font.SourceSans,
-		TextColor3 = Color3.fromRGB(255, 255, 255),
-		TextXAlignment = Enum.TextXAlignment.Left,
-		Parent = parent.content
-	})
-	
-	setmetatable(option, {__newindex = function(t, i, v)
-		if i == "Text" then
-			main.Text = " " .. tostring(v)
-		end
-	end})
+    -- Xử lý các options mặc định
+    option.color = option.color or Color3.fromRGB(255, 255, 255)
+    option.hoverColor = option.hoverColor or Color3.fromRGB(0, 255, 128)
+    option.copyable = option.copyable or false -- Tính năng copy khi click
+    option.alignment = option.alignment or Enum.TextXAlignment.Left
+
+    local main = library:Create("TextButton", { -- Đổi từ TextLabel sang TextButton để bắt sự kiện Click
+        LayoutOrder = option.position,
+        Size = UDim2.new(1, 0, 0, 26),
+        BackgroundTransparency = 1,
+        Text = "", -- Để trống vì ta dùng child Label để quản lý tốt hơn
+        AutoButtonColor = false,
+        Parent = parent.content
+    })
+
+    -- Container chứa nội dung để căn lề và padding
+    local container = library:Create("Frame", {
+        Size = UDim2.new(1, -20, 1, 0),
+        Position = UDim2.new(0, 10, 0, 0),
+        BackgroundTransparency = 1,
+        Parent = main
+    })
+
+    local iconLabel
+    local textOffset = 0
+
+    -- Nếu có icon thì tạo ImageLabel
+    if option.icon then
+        textOffset = 25
+        iconLabel = library:Create("ImageLabel", {
+            Size = UDim2.new(0, 20, 0, 20),
+            Position = UDim2.new(0, 0, 0.5, 0),
+            AnchorPoint = Vector2.new(0, 0.5),
+            BackgroundTransparency = 1,
+            Image = option.icon,
+            ImageColor3 = option.color,
+            Parent = container
+        })
+    end
+
+    local labelText = library:Create("TextLabel", {
+        Size = UDim2.new(1, -textOffset, 1, 0),
+        Position = UDim2.new(0, textOffset, 0, 0),
+        BackgroundTransparency = 1,
+        Text = option.text,
+        TextSize = 16, -- Giảm nhẹ size cho tinh tế
+        Font = Enum.Font.GothamSemibold, -- Font đẹp hơn SourceSans
+        TextColor3 = option.color,
+        TextXAlignment = option.alignment,
+        RichText = true, -- BẬT RICH TEXT (Quan trọng)
+        TextWrapped = true,
+        Parent = container
+    })
+
+    -- Hiệu ứng khi copy (nếu bật)
+    if option.copyable then
+        main.MouseButton1Click:Connect(function()
+            if setclipboard then
+                setclipboard(option.text)
+                
+                -- Hiệu ứng báo đã copy
+                local oldText = labelText.Text
+                labelText.Text = "Copied to clipboard!"
+                labelText.TextColor3 = option.hoverColor
+                tweenService:Create(iconLabel or {}, TweenInfo.new(0.2), {ImageColor3 = option.hoverColor}):Play()
+                
+                wait(1)
+                
+                labelText.Text = oldText
+                labelText.TextColor3 = option.color
+                tweenService:Create(iconLabel or {}, TweenInfo.new(0.2), {ImageColor3 = option.color}):Play()
+            else
+                library:Notify({title = "Error", content = "Your executor does not support setclipboard", duration = 3})
+            end
+        end)
+
+        -- Hiệu ứng Hover để người dùng biết là bấm được
+        main.MouseEnter:Connect(function()
+            tweenService:Create(labelText, TweenInfo.new(0.2), {TextColor3 = option.hoverColor}):Play()
+            if iconLabel then
+                 tweenService:Create(iconLabel, TweenInfo.new(0.2), {ImageColor3 = option.hoverColor}):Play()
+            end
+        end)
+
+        main.MouseLeave:Connect(function()
+            tweenService:Create(labelText, TweenInfo.new(0.2), {TextColor3 = option.color}):Play()
+             if iconLabel then
+                 tweenService:Create(iconLabel, TweenInfo.new(0.2), {ImageColor3 = option.color}):Play()
+            end
+        end)
+    end
+    
+    -- API cập nhật text động
+    function option:SetText(newText)
+        option.text = newText
+        labelText.Text = newText
+    end
+
+    -- API cập nhật màu động
+    function option:SetColor(newColor)
+        option.color = newColor
+        labelText.TextColor3 = newColor
+        if iconLabel then iconLabel.ImageColor3 = newColor end
+    end
 end
 
 function createToggle(option, parent)
@@ -1751,6 +1887,8 @@ local function loadOptions(option, holder)
 	for _,newOption in next, option.options do
 		if newOption.type == "label" then
 			createLabel(newOption, option)
+			elseif newOption.type == "paragraph" then
+    createParagraph(newOption, option)
 		elseif newOption.type == "toggle" then
 			createToggle(newOption, option)
 		elseif newOption.type == "button" then
@@ -1772,13 +1910,32 @@ local function loadOptions(option, holder)
 end
 
 local function getFnctions(parent)
+function parent:AddParagraph(option)
+    option = typeof(option) == "table" and option or {}
+    option.title = tostring(option.title or "Title")
+    option.content = tostring(option.content or "Content goes here...")
+    option.type = "paragraph"
+    option.position = #self.options
+    table.insert(self.options, option)
+    return option
+end
+
 	function parent:AddLabel(option)
-		option = typeof(option) == "table" and option or {}
-		option.text = tostring(option.text)
-		option.type = "label"
-		option.position = #self.options
-		table.insert(self.options, option)
+		option = typeof(option) == "table" and option or {text = tostring(option)} -- Hỗ trợ nhập string trực tiếp hoặc table
 		
+        -- Cấu hình mặc định
+        option.text = tostring(option.text or "Label")
+        option.type = "label"
+        option.position = #self.options
+        
+        -- Các option mở rộng mới
+        option.color = option.color -- Màu chữ (mặc định trắng trong createLabel)
+        option.hoverColor = option.hoverColor -- Màu khi hover (nếu copyable = true)
+        option.icon = option.icon -- Link ảnh/rbxassetid
+        option.copyable = option.copyable -- True/False
+        option.alignment = option.alignment -- Enum.TextXAlignment...
+        
+		table.insert(self.options, option)
 		return option
 	end
 	
