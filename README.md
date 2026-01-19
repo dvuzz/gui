@@ -52,6 +52,16 @@ folder:AddLabel({
 	text = "This Is Sick!",
 	type = "label"
 	})
+
+folder:AddLabel("Hello World")
+
+folder:AddLabel({
+    text = "Join Discord Server",
+    icon = "rbxassetid://Image ID", 
+    copyable = true,
+    hoverColor = Color3.fromRGB(88, 101, 242) 
+})
+
 ```
 
 
