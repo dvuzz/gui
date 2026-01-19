@@ -325,75 +325,167 @@ function createToggle(option, parent)
 	end})
 end
 
-function createButton(option, parent)
-	local main = library:Create("TextLabel", {
-		ZIndex = 2,
-		LayoutOrder = option.position,
-		Size = UDim2.new(1, 0, 0, 34),
-		BackgroundTransparency = 1,
-		Text = " " .. option.text,
-		TextSize = 17,
-		Font = Enum.Font.SourceSans,
-		TextColor3 = Color3.fromRGB(255, 255, 255),
-		Parent = parent.content
-	})
-	
-	local round = library:Create("ImageLabel", {
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.new(0.5, 0, 0.5, 0),
-		Size = UDim2.new(1, -12, 1, -10),
-		BackgroundTransparency = 1,
-		Image = "rbxassetid://3570695787",
-		ImageColor3 = Color3.fromRGB(40, 40, 40),
-		ScaleType = Enum.ScaleType.Slice,
-		SliceCenter = Rect.new(100, 100, 100, 100),
-		SliceScale = 0.02,
-		Parent = main
-	})
-	
-	local inContact
-	local clicking
-	main.InputBegan:connect(function(input)
-		if input.UserInputType == ui then
-			library.flags[option.flag] = true
-			clicking = true
-			tweenService:Create(round, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageColor3 = Color3.fromRGB(255, 255, 255)}):Play()
-			option.callback()
-		elseif input.UserInputType == Enum.UserInputType.Touch then
-			library.flags[option.flag] = true
-			clicking = true
-			tweenService:Create(round, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageColor3 = Color3.fromRGB(255, 255, 255)}):Play()
-			option.callback()
-		end
-		if input.UserInputType == Enum.UserInputType.MouseMovement then
-			inContact = true
-			tweenService:Create(round, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageColor3 = Color3.fromRGB(60, 60, 60)}):Play()
-		end
-	end)
-	
-	main.InputEnded:connect(function(input)
-		if input.UserInputType == ui then
-			clicking = false
-			if inContact then
-				tweenService:Create(round, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageColor3 = Color3.fromRGB(60, 60, 60)}):Play()
-			else
-				tweenService:Create(round, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageColor3 = Color3.fromRGB(40, 40, 40)}):Play()
-			end
-		elseif input.UserInputType == Enum.UserInputType.Touch then
-			clicking = false
-			if inContact then
-				tweenService:Create(round, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageColor3 = Color3.fromRGB(60, 60, 60)}):Play()
-			else
-				tweenService:Create(round, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageColor3 = Color3.fromRGB(40, 40, 40)}):Play()
-			end
-		end
-		if input.UserInputType == Enum.UserInputType.MouseMovement then
-			inContact = false
-			if not clicking then
-				tweenService:Create(round, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageColor3 = Color3.fromRGB(40, 40, 40)}):Play()
-			end
-		end
-	end)
+local function createButton(option, parent)
+    
+    local main = library:Create("TextButton", { 
+        LayoutOrder = option.position,
+        Size = UDim2.new(1, 0, 0, 34), 
+        BackgroundTransparency = 1,
+        Text = "",
+        AutoButtonColor = false,
+        Parent = parent.content
+    })
+
+    
+    local container = library:Create("Frame", {
+        Name = "Container",
+        Size = UDim2.new(1, 0, 1, -4),
+        Position = UDim2.new(0, 0, 0, 2),
+        BackgroundColor3 = Color3.fromRGB(35, 35, 35),
+        ClipsDescendants = true, 
+        Parent = main
+    })
+
+    library:Create("UICorner", {
+        CornerRadius = UDim.new(0, 6),
+        Parent = container
+    })
+
+    
+    local stroke = library:Create("UIStroke", {
+        Color = Color3.fromRGB(60, 60, 60),
+        Thickness = 1,
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+        Parent = container
+    })
+
+    
+    if option.icon then
+        library:Create("ImageLabel", {
+            Position = UDim2.new(0, 10, 0.5, 0),
+            AnchorPoint = Vector2.new(0, 0.5),
+            Size = UDim2.new(0, 20, 0, 20),
+            BackgroundTransparency = 1,
+            Image = option.icon,
+            ImageColor3 = Color3.fromRGB(255, 255, 255),
+            Parent = container
+        })
+    end
+
+    
+    local title = library:Create("TextLabel", {
+        Size = UDim2.new(1, option.icon and -40 or 0, 1, 0),
+        Position = UDim2.new(0, option.icon and 35 or 0, 0, 0),
+        BackgroundTransparency = 1,
+        Text = option.text,
+        TextSize = 16,
+        Font = Enum.Font.GothamBold,
+        TextColor3 = Color3.fromRGB(200, 200, 200),
+        TextXAlignment = option.icon and Enum.TextXAlignment.Left or Enum.TextXAlignment.Center,
+        Parent = container
+    })
+
+    
+    local function spawnRipple(inputObject)
+        if not option.active then return end
+        
+        local ripple = library:Create("ImageLabel", {
+            Name = "Ripple",
+            BackgroundTransparency = 1,
+            Image = "rbxassetid://2708891598", 
+            ImageColor3 = Color3.fromRGB(255, 255, 255),
+            ImageTransparency = 0.6,
+            Parent = container,
+            ZIndex = 5
+        })
+
+        local x, y
+        if inputObject.UserInputType == Enum.UserInputType.Touch or inputObject.UserInputType == Enum.UserInputType.MouseButton1 then
+            x = inputObject.Position.X - container.AbsolutePosition.X
+            y = inputObject.Position.Y - container.AbsolutePosition.Y
+        else
+            x = container.AbsoluteSize.X / 2
+            y = container.AbsoluteSize.Y / 2
+        end
+
+        ripple.Position = UDim2.new(0, x, 0, y)
+        ripple.Size = UDim2.new(0, 0, 0, 0)
+        ripple.AnchorPoint = Vector2.new(0.5, 0.5)
+
+        local maxSize = math.max(container.AbsoluteSize.X, container.AbsoluteSize.Y) * 2.5
+        
+        tweenService:Create(ripple, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, maxSize, 0, maxSize),
+            ImageTransparency = 1
+        }):Play()
+
+        game:GetService("Debris"):AddItem(ripple, 0.6)
+    end
+
+    
+    main.MouseEnter:Connect(function()
+        if not option.active then return end
+        tweenService:Create(container, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(45, 45, 45)}):Play()
+        tweenService:Create(stroke, TweenInfo.new(0.3), {Color = Color3.fromRGB(100, 100, 100)}):Play()
+        tweenService:Create(title, TweenInfo.new(0.3), {TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+    end)
+
+    
+    main.MouseLeave:Connect(function()
+        if not option.active then return end
+        tweenService:Create(container, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(35, 35, 35)}):Play()
+        tweenService:Create(stroke, TweenInfo.new(0.3), {Color = Color3.fromRGB(60, 60, 60)}):Play()
+        tweenService:Create(title, TweenInfo.new(0.3), {TextColor3 = Color3.fromRGB(200, 200, 200)}):Play()
+    end)
+
+    
+    main.InputBegan:Connect(function(input)
+        if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and option.active then
+            spawnRipple(input)
+            tweenService:Create(container, TweenInfo.new(0.1), {Size = UDim2.new(1, -2, 1, -6)}):Play() 
+            
+            task.spawn(function()
+                option.callback()
+            end)
+        end
+    end)
+
+    main.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            tweenService:Create(container, TweenInfo.new(0.1), {Size = UDim2.new(1, 0, 1, -4)}):Play() 
+        end
+    end)
+
+    
+    
+    function option:SetText(text)
+        option.text = text
+        title.Text = text
+    end
+
+    function option:SetCallback(fn)
+        option.callback = fn
+    end
+
+    function option:Fire()
+        option.callback()
+        spawnRipple({UserInputType = Enum.UserInputType.None}) 
+    end
+
+    function option:Lock(bool)
+        option.active = not bool
+        if bool then
+            
+            tweenService:Create(container, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(20, 20, 20)}):Play()
+            tweenService:Create(title, TweenInfo.new(0.3), {TextColor3 = Color3.fromRGB(100, 100, 100)}):Play()
+            tweenService:Create(stroke, TweenInfo.new(0.3), {Color = Color3.fromRGB(40, 40, 40)}):Play()
+        else
+            
+            tweenService:Create(container, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(35, 35, 35)}):Play()
+            tweenService:Create(title, TweenInfo.new(0.3), {TextColor3 = Color3.fromRGB(200, 200, 200)}):Play()
+            tweenService:Create(stroke, TweenInfo.new(0.3), {Color = Color3.fromRGB(60, 60, 60)}):Play()
+        end
+    end
 end
 
 local function createBind(option, parent)
@@ -1650,6 +1742,8 @@ end
 	function parent:AddButton(option)
 		option = typeof(option) == "table" and option or {}
 		option.text = tostring(option.text)
+        option.icon = option.icon or nil 
+        option.active = true 
 		option.callback = typeof(option.callback) == "function" and option.callback or function() end
 		option.type = "button"
 		option.position = #self.options
