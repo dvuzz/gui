@@ -5,6 +5,21 @@ local tweenService = game:GetService"TweenService"
 local textService = game:GetService"TextService"
 local inputService = game:GetService"UserInputService"
 local ui = Enum.UserInputType.MouseButton1
+local httpService = game:GetService("HttpService")
+
+library.theme = {
+    accent = Color3.fromRGB(0, 255, 128),
+    ui_scale = 1.0,
+    auto_save = true,
+    folder_name = "VuzConfig",
+    file_name = "config.json"
+}
+
+library.registry = {
+    toggles = {},
+    sliders = {},
+    titles = {}
+}
 
 local dragging, dragInput, dragStart, startPos, dragObject
 
@@ -41,6 +56,58 @@ spawn(function()
 	end
 end)
 
+function library:SaveConfig()
+    if not isfolder(library.theme.folder_name) then
+        makefolder(library.theme.folder_name)
+    end
+    
+    local data = {
+        flags = library.flags,
+        theme = {
+            r = library.theme.accent.R,
+            g = library.theme.accent.G,
+            b = library.theme.accent.B,
+            scale = library.theme.ui_scale,
+            auto_save = library.theme.auto_save
+        }
+    }
+    
+    writefile(library.theme.folder_name .. "/" .. library.theme.file_name, httpService:JSONEncode(data))
+    
+    
+end
+
+function library:LoadConfig()
+    if isfile(library.theme.folder_name .. "/" .. library.theme.file_name) then
+        local content = readfile(library.theme.folder_name .. "/" .. library.theme.file_name)
+        local data = httpService:JSONDecode(content)
+        
+        
+        if data.theme then
+            library.theme.accent = Color3.new(data.theme.r, data.theme.g, data.theme.b)
+            library.theme.ui_scale = data.theme.scale or 1
+            library.theme.auto_save = data.theme.auto_save
+            
+            
+            for _, window in pairs(library.windows) do
+                if window.main and window.main:FindFirstChild("UIScale") then
+                    window.main.UIScale.Scale = library.theme.ui_scale
+                end
+            end
+            
+            
+        end
+        
+        
+        if data.flags then
+            for flag, value in pairs(data.flags) do
+                library.flags[flag] = value
+                
+            end
+        end
+    end
+end
+
 function library:Create(class, properties)
 	properties = typeof(properties) == "table" and properties or {}
 	local inst = Instance.new(class)
@@ -65,6 +132,12 @@ local function createOptionHolder(holderTitle, parent, parentTable, subHolder)
 		ClipsDescendants = true,
 		Parent = parent
 	})
+    
+    -- Thêm UIScale để chỉnh kích thước
+    local uiScale = library:Create("UIScale", {
+        Scale = library.theme.ui_scale,
+        Parent = parentTable.main
+    })
 	
 	local round
 	if not subHolder then
@@ -111,6 +184,48 @@ local function createOptionHolder(holderTitle, parent, parentTable, subHolder)
 		ScaleType = Enum.ScaleType.Fit,
 		Parent = closeHolder
 	})
+
+    -- [NEW] Nút Settings
+    local settingIcon
+    local settingsFrame
+    if not subHolder then
+        local settingHolder = library:Create("Frame", {
+            Position = UDim2.new(1, -size, 0, 0), -- Đặt cạnh nút đóng
+            Size = UDim2.new(0, size, 1, 0),
+            BackgroundTransparency = 1,
+            Parent = title
+        })
+
+        settingIcon = library:Create("ImageButton", {
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.new(0.5, 0, 0.5, 0),
+            Size = UDim2.new(0, 16, 0, 16),
+            BackgroundTransparency = 1,
+            Image = "rbxassetid://70417525010861", -- Icon bánh răng
+            ImageColor3 = Color3.fromRGB(100, 100, 100),
+            Parent = settingHolder
+        })
+
+        -- Frame chứa UI Settings
+        settingsFrame = library:Create("Frame", {
+            Name = "SettingsFrame",
+            Position = UDim2.new(0, 0, 0, size),
+            Size = UDim2.new(1, 0, 1, -size),
+            BackgroundTransparency = 0.1,
+            BackgroundColor3 = Color3.fromRGB(25, 25, 25),
+            Visible = false,
+            ZIndex = 20,
+            Parent = parentTable.main
+        })
+        library:Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = settingsFrame})
+        
+        -- Logic mở Settings
+        settingIcon.MouseButton1Click:Connect(function()
+            settingsFrame.Visible = not settingsFrame.Visible
+            parentTable.content.Visible = not settingsFrame.Visible -- Ẩn nội dung chính
+            tweenService:Create(settingIcon, TweenInfo.new(0.3), {Rotation = settingsFrame.Visible and 180 or 0, ImageColor3 = settingsFrame.Visible and library.theme.accent or Color3.fromRGB(100, 100, 100)}):Play()
+        end)
+    end
 	
 	parentTable.content = library:Create("Frame", {
 		Position = UDim2.new(0, 0, 0, size),
@@ -125,9 +240,101 @@ local function createOptionHolder(holderTitle, parent, parentTable, subHolder)
 	})
 	
 	layout.Changed:connect(function()
-		parentTable.content.Size = UDim2.new(1, 0, 0, layout.AbsoluteContentSize.Y)
-		parentTable.main.Size = #parentTable.options > 0 and parentTable.open and UDim2.new(0, 230, 0, layout.AbsoluteContentSize.Y + size) or UDim2.new(0, 230, 0, size)
+        local contentSize = layout.AbsoluteContentSize.Y
+        -- Nếu Settings đang mở, dùng size của settings (nếu có dynamic size) hoặc giữ nguyên logic
+		parentTable.content.Size = UDim2.new(1, 0, 0, contentSize)
+        
+        if settingsFrame and settingsFrame.Visible then
+             -- Khi ở chế độ setting, giữ size cố định hoặc dynamic theo setting items
+             -- Ở đây ta sẽ giữ size theo content chính để không bị giật, settingsFrame fill theo parent
+        end
+
+		parentTable.main.Size = #parentTable.options > 0 and parentTable.open and UDim2.new(0, 230, 0, contentSize + size) or UDim2.new(0, 230, 0, size)
 	end)
+	
+    -- [NEW] Xây dựng giao diện Settings bên trong
+    if not subHolder and settingsFrame then
+        local setList = library:Create("UIListLayout", {
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            Padding = UDim.new(0, 5),
+            Parent = settingsFrame
+        })
+        library:Create("UIPadding", {PaddingTop = UDim.new(0, 5), PaddingLeft = UDim.new(0, 5), PaddingRight = UDim.new(0, 5), Parent = settingsFrame})
+
+        -- 1. Helper function tạo nút/slider trong setting (Simplified)
+        local function createSettingLabel(text)
+            library:Create("TextLabel", {Size = UDim2.new(1,0,0,20), BackgroundTransparency=1, Text=text, TextColor3=Color3.fromRGB(200,200,200), Font=Enum.Font.GothamBold, TextSize=14, Parent=settingsFrame})
+        end
+
+        -- 2. GUI UI Scale Slider
+        createSettingLabel("GUI Size (Scale)")
+        local scaleContainer = library:Create("Frame", {Size=UDim2.new(1,0,0,30), BackgroundTransparency=1, Parent=settingsFrame})
+        local scaleInput = library:Create("TextBox", {Size=UDim2.new(1,0,1,0), BackgroundColor3=Color3.fromRGB(40,40,40), Text=tostring(library.theme.ui_scale), TextColor3=Color3.fromRGB(255,255,255), Parent=scaleContainer})
+        scaleInput.FocusLost:Connect(function()
+            local n = tonumber(scaleInput.Text)
+            if n then
+                library.theme.ui_scale = n
+                uiScale.Scale = n
+                if library.theme.auto_save then library:SaveConfig() end
+            end
+        end)
+
+        -- 3. Accent Color Picker (Đơn giản hóa: Nhập mã RGB hoặc Button đổi màu ngẫu nhiên)
+        createSettingLabel("Accent Color (R, G, B)")
+        local colorContainer = library:Create("Frame", {Size=UDim2.new(1,0,0,30), BackgroundTransparency=1, Parent=settingsFrame})
+        local rBox = library:Create("TextBox", {Size=UDim2.new(0.3,0,1,0), Position=UDim2.new(0,0,0,0), BackgroundColor3=Color3.fromRGB(40,40,40), Text=tostring(math.floor(library.theme.accent.R*255)), TextColor3=Color3.fromRGB(255,100,100), Parent=colorContainer})
+        local gBox = library:Create("TextBox", {Size=UDim2.new(0.3,0,1,0), Position=UDim2.new(0.35,0,0,0), BackgroundColor3=Color3.fromRGB(40,40,40), Text=tostring(math.floor(library.theme.accent.G*255)), TextColor3=Color3.fromRGB(100,255,100), Parent=colorContainer})
+        local bBox = library:Create("TextBox", {Size=UDim2.new(0.3,0,1,0), Position=UDim2.new(0.7,0,0,0), BackgroundColor3=Color3.fromRGB(40,40,40), Text=tostring(math.floor(library.theme.accent.B*255)), TextColor3=Color3.fromRGB(100,100,255), Parent=colorContainer})
+        
+        local function updateColor()
+            local r, g, b = tonumber(rBox.Text), tonumber(gBox.Text), tonumber(bBox.Text)
+            if r and g and b then
+                library.theme.accent = Color3.fromRGB(r, g, b)
+                if library.theme.auto_save then library:SaveConfig() end
+                -- Update existing UI elements
+                for _, toggleBg in pairs(library.registry.toggles) do
+                    if toggleBg.BackgroundColor3 ~= Color3.fromRGB(50,50,50) then -- Nếu đang bật
+                        tweenService:Create(toggleBg, TweenInfo.new(0.3), {BackgroundColor3 = library.theme.accent}):Play()
+                    end
+                end
+            end
+        end
+        rBox.FocusLost:Connect(updateColor)
+        gBox.FocusLost:Connect(updateColor)
+        bBox.FocusLost:Connect(updateColor)
+
+        -- 4. Auto Save Toggle
+        local autoSaveBtn = library:Create("TextButton", {
+            Size = UDim2.new(1,0,0,30),
+            BackgroundColor3 = library.theme.auto_save and library.theme.accent or Color3.fromRGB(40,40,40),
+            Text = "Auto Save: " .. (library.theme.auto_save and "ON" or "OFF"),
+            TextColor3 = Color3.fromRGB(255,255,255),
+            Parent = settingsFrame
+        })
+        library:Create("UICorner", {CornerRadius=UDim.new(0,4), Parent=autoSaveBtn})
+        autoSaveBtn.MouseButton1Click:Connect(function()
+            library.theme.auto_save = not library.theme.auto_save
+            autoSaveBtn.Text = "Auto Save: " .. (library.theme.auto_save and "ON" or "OFF")
+            tweenService:Create(autoSaveBtn, TweenInfo.new(0.3), {BackgroundColor3 = library.theme.auto_save and library.theme.accent or Color3.fromRGB(40,40,40)}):Play()
+            library:SaveConfig()
+        end)
+
+        -- 5. Force Save Button
+        local saveBtn = library:Create("TextButton", {
+            Size = UDim2.new(1,0,0,30),
+            BackgroundColor3 = Color3.fromRGB(40,40,40),
+            Text = "Save Config Now",
+            TextColor3 = Color3.fromRGB(255,255,255),
+            Parent = settingsFrame
+        })
+        library:Create("UICorner", {CornerRadius=UDim.new(0,4), Parent=saveBtn})
+        saveBtn.MouseButton1Click:Connect(function()
+            library:SaveConfig()
+            saveBtn.Text = "Saved!"
+            wait(1)
+            saveBtn.Text = "Save Config Now"
+        end)
+    end
 	
 	if not subHolder then
 		library:Create("UIPadding", {
@@ -195,7 +402,7 @@ end
 local function createParagraph(option, parent)
     local main = library:Create("Frame", {
         LayoutOrder = option.position,
-        Size = UDim2.new(1, 0, 0, 0), -- Chiều cao sẽ tự tính toán
+        Size = UDim2.new(1, 0, 0, 0), 
         BackgroundTransparency = 1,
         Parent = parent.content
     })
@@ -227,10 +434,10 @@ local function createParagraph(option, parent)
         Parent = main
     })
 
-    -- Tự động chỉnh chiều cao frame dựa trên độ dài văn bản
+    
     content.AutomaticSize = Enum.AutomaticSize.Y
     
-    -- Cập nhật lại size của Main Frame sau khi render text
+    
     runService.RenderStepped:Connect(function()
         main.Size = UDim2.new(1, 0, 0, content.AbsoluteSize.Y + 35)
     end)
@@ -242,22 +449,22 @@ local function createParagraph(option, parent)
 end
 	
 local function createLabel(option, parent)
-    -- Xử lý các options mặc định
+    
     option.color = option.color or Color3.fromRGB(255, 255, 255)
     option.hoverColor = option.hoverColor or Color3.fromRGB(0, 255, 128)
-    option.copyable = option.copyable or false -- Tính năng copy khi click
+    option.copyable = option.copyable or false 
     option.alignment = option.alignment or Enum.TextXAlignment.Left
 
-    local main = library:Create("TextButton", { -- Đổi từ TextLabel sang TextButton để bắt sự kiện Click
+    local main = library:Create("TextButton", { 
         LayoutOrder = option.position,
         Size = UDim2.new(1, 0, 0, 26),
         BackgroundTransparency = 1,
-        Text = "", -- Để trống vì ta dùng child Label để quản lý tốt hơn
+        Text = "", 
         AutoButtonColor = false,
         Parent = parent.content
     })
 
-    -- Container chứa nội dung để căn lề và padding
+    
     local container = library:Create("Frame", {
         Size = UDim2.new(1, -20, 1, 0),
         Position = UDim2.new(0, 10, 0, 0),
@@ -268,7 +475,7 @@ local function createLabel(option, parent)
     local iconLabel
     local textOffset = 0
 
-    -- Nếu có icon thì tạo ImageLabel
+    
     if option.icon then
         textOffset = 25
         iconLabel = library:Create("ImageLabel", {
@@ -287,24 +494,24 @@ local function createLabel(option, parent)
         Position = UDim2.new(0, textOffset, 0, 0),
         BackgroundTransparency = 1,
         Text = option.text,
-        TextSize = 16, -- Giảm nhẹ size cho tinh tế
-        Font = Enum.Font.GothamSemibold, -- Font đẹp hơn SourceSans
+        TextSize = 16, 
+        Font = Enum.Font.GothamSemibold, 
         TextColor3 = option.color,
         TextXAlignment = option.alignment,
-        RichText = true, -- BẬT RICH TEXT (Quan trọng)
+        RichText = true, 
         TextWrapped = true,
         Parent = container
     })
 
-    -- Hiệu ứng khi copy (nếu bật)
+    
     if option.copyable then
         main.MouseButton1Click:Connect(function()
             if setclipboard then
                 setclipboard(option.text)
                 
-                -- Hiệu ứng báo đã copy
+                
                 local oldText = labelText.Text
-                labelText.Text = "Copied to clipboard!"
+                labelText.Text = "Copied to clipboard"
                 labelText.TextColor3 = option.hoverColor
                 tweenService:Create(iconLabel or {}, TweenInfo.new(0.2), {ImageColor3 = option.hoverColor}):Play()
                 
@@ -318,7 +525,7 @@ local function createLabel(option, parent)
             end
         end)
 
-        -- Hiệu ứng Hover để người dùng biết là bấm được
+        
         main.MouseEnter:Connect(function()
             tweenService:Create(labelText, TweenInfo.new(0.2), {TextColor3 = option.hoverColor}):Play()
             if iconLabel then
@@ -334,13 +541,13 @@ local function createLabel(option, parent)
         end)
     end
     
-    -- API cập nhật text động
+    
     function option:SetText(newText)
         option.text = newText
         labelText.Text = newText
     end
 
-    -- API cập nhật màu động
+    
     function option:SetColor(newColor)
         option.color = newColor
         labelText.TextColor3 = newColor
@@ -350,7 +557,7 @@ end
 
 function createToggle(option, parent)
 	
-	option.onColor = option.onColor or Color3.fromRGB(0, 255, 128) 
+	option.onColor = option.onColor or library.theme.accent
 	option.offColor = Color3.fromRGB(50, 50, 50)
 
 	local main = library:Create("TextButton", { 
@@ -377,6 +584,7 @@ function createToggle(option, parent)
 
 	
 	local switchBg = library:Create("Frame", {
+		table.insert(library.registry.toggles, switchBg)
 		AnchorPoint = Vector2.new(1, 0.5),
 		Position = UDim2.new(1, -10, 0.5, 0),
 		Size = UDim2.new(0, 44, 0, 22),
@@ -421,8 +629,12 @@ function createToggle(option, parent)
 		library.flags[self.flag] = bool
 
 		local targetPos = bool and UDim2.new(1, -20, 0.5, 0) or UDim2.new(0, 2, 0.5, 0)
-		local targetColor = bool and self.onColor or self.offColor
+		local targetColor = bool and (self.onColor or library.theme.accent) or self.offColor
+		
+		if library.theme.auto_save then
+    library:SaveConfig() 
 
+end
 		
 		tweenService:Create(knob, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = targetPos}):Play()
 		tweenService:Create(switchBg, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = targetColor}):Play()
@@ -1921,19 +2133,19 @@ function parent:AddParagraph(option)
 end
 
 	function parent:AddLabel(option)
-		option = typeof(option) == "table" and option or {text = tostring(option)} -- Hỗ trợ nhập string trực tiếp hoặc table
+		option = typeof(option) == "table" and option or {text = tostring(option)} 
 		
-        -- Cấu hình mặc định
+        
         option.text = tostring(option.text or "Label")
         option.type = "label"
         option.position = #self.options
         
-        -- Các option mở rộng mới
-        option.color = option.color -- Màu chữ (mặc định trắng trong createLabel)
-        option.hoverColor = option.hoverColor -- Màu khi hover (nếu copyable = true)
-        option.icon = option.icon -- Link ảnh/rbxassetid
-        option.copyable = option.copyable -- True/False
-        option.alignment = option.alignment -- Enum.TextXAlignment...
+        
+        option.color = option.color 
+        option.hoverColor = option.hoverColor 
+        option.icon = option.icon 
+        option.copyable = option.copyable 
+        option.alignment = option.alignment 
         
 		table.insert(self.options, option)
 		return option
@@ -2158,6 +2370,18 @@ game:service('Players').LocalPlayer.Idled:connect(function()
 VirtualUser:CaptureController()
 VirtualUser:ClickButton2(Vector2.new())
 end)
+
+    for _, window in next, self.windows do
+        if window.canInit and not window.init then
+            window.init = true
+            createOptionHolder(window.title, self.base, window)
+            loadOptions(window)
+        end
+    end
+    
+    self:LoadConfig() -- [NEW] Load cấu hình khi mở GUI
+    return self.base
+end
 
 
 
