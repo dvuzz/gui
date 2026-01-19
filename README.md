@@ -134,7 +134,7 @@ library:Notify({
     title = "test",
     content = "test",
     duration = 5,
-    image = "rbxassetid://id" -- this line isn’t really necessary, you can remove it
+    image = "rbxassetid://Image ID" -- this line isn’t really necessary, you can remove it
 })
 ```
 
