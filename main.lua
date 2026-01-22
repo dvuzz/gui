@@ -2372,19 +2372,19 @@ function library:LoadConfig(configName)
         -- Cập nhật dữ liệu
         library.flags[flag] = cleanValue
         
-        -- Cập nhật Giao diện (Visual) và chạy Callback
+        -- Cập nhật Giao diện (Visual) và chạy Callback an toàn hơn
         if option then
-            if option.type == "toggle" then
+            if option.type == "toggle" and option.SetState then
                 option:SetState(cleanValue)
-            elseif option.type == "slider" then
+            elseif option.type == "slider" and option.SetValue then
                 option:SetValue(cleanValue)
-            elseif option.type == "list" then
-                option:SetValue(cleanValue)
-            elseif option.type == "color" then
+            elseif option.type == "list" and option.SetValue then
+                option:SetValue(cleanValue) -- Đã thêm kiểm tra option.SetValue
+            elseif option.type == "color" and option.SetColor then
                 option:SetColor(cleanValue)
-            elseif option.type == "bind" then
+            elseif option.type == "bind" and option.SetKey then
                 option:SetKey(cleanValue)
-            elseif option.type == "input" then
+            elseif option.type == "input" and option.SetValue then
                 option:SetValue(cleanValue)
             end
         end
