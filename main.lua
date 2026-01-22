@@ -2386,7 +2386,7 @@ function library:LoadConfig(configName)
 end
 
 -- Hàm tạo Menu Config nhanh
-function library:AddConfig(window)
+function library:AddConfigTab(window)
     local tab = window:AddFolder("Settings")
     local cfgName = "default"
     
