@@ -1169,6 +1169,14 @@ local function createList(option, parent, holder)
 	layout.Changed:connect(updateSize)
 
 	function option:RefreshList(searchText)
+		-- --- BẮT ĐẦU ĐOẠN SỬA LỖI ---
+		-- Nếu dữ liệu truyền vào là một bảng (Table), cập nhật lại danh sách option.values
+		if typeof(searchText) == "table" then
+			option.values = searchText
+			searchText = "" -- Đặt lại từ khóa tìm kiếm thành rỗng để hiển thị hết
+		end
+		-- --- KẾT THÚC ĐOẠN SỬA LỖI ---
+
 		searchText = searchText and string.lower(searchText) or ""
 		
 		for _, item in ipairs(content:GetChildren()) do
