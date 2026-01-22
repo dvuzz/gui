@@ -16,7 +16,10 @@ local tab = library:CreateWindow("Your Title")
 local folder = tab:AddFolder("Folder")
 ```
 
-
+### Adding config
+```lua
+library:AddConfigTab(tab)
+```
 
 ### Adding Button
 ```lua
@@ -56,7 +59,7 @@ folder:AddLabel({
 folder:AddLabel("Hello World")
 
 folder:AddLabel({
-    text = "Join Discord Server",
+    text = "link",
     icon = "rbxassetid://Image ID", 
     copyable = true,
     hoverColor = Color3.fromRGB(88, 101, 242) 
@@ -150,7 +153,6 @@ library:Notify({
     title = "test",
     content = "test",
     duration = 5,
-    image = "rbxassetid://Image ID" -- this line isn’t really necessary, you can remove it
 })
 ```
 
