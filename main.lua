@@ -1957,6 +1957,7 @@ end
     option.position = #self.options
     option.flag = option.flag or option.text
     library.flags[option.flag] = option.state
+    library.options[option.flag] = option 
     table.insert(self.options, option)
     
     return option
@@ -1986,6 +1987,7 @@ end
 		option.position = #self.options
 		option.flag = option.flag or option.text
 		library.flags[option.flag] = option.key
+		library.options[option.flag] = option 
 		table.insert(self.options, option)
 		
 		return option
@@ -2005,6 +2007,7 @@ end
 		option.position = #self.options
 		option.flag = option.flag or option.text
 		library.flags[option.flag] = option.value
+		library.options[option.flag] = option 
 		table.insert(self.options, option)
 		
 		return option
@@ -2021,6 +2024,7 @@ end
 		option.position = #self.options
 		option.flag = option.flag or option.text
 		library.flags[option.flag] = option.value
+		library.options[option.flag] = option 
 		table.insert(self.options, option)
 		
 		return option
@@ -2037,6 +2041,7 @@ end
 		option.position = #self.options
 		option.flag = option.flag or option.text
 		library.flags[option.flag] = option.value
+		library.options[option.flag] = option 
 		table.insert(self.options, option)
 		
 		return option
@@ -2052,6 +2057,7 @@ end
 		option.position = #self.options
 		option.flag = option.flag or option.text
 		library.flags[option.flag] = option.color
+		library.options[option.flag] = option 
 		table.insert(self.options, option)
 		
 		return option
@@ -2301,58 +2307,127 @@ function library:Notify(config)
     end)
 end
 
--- Folder lưu config
-local configFolder = "vuzlib" -- Đổi tên tùy thích
+local httpService = game:GetService("HttpService")
+local configFolder = "vuzlib" -- Tên thư mục chứa config
 if not isfolder(configFolder) then makefolder(configFolder) end
 
+-- Hàm chuyển Color3 thành bảng {r, g, b} để lưu
+local function encodeColor(color)
+    return {R = color.R, G = color.G, B = color.B}
+end
+
+-- Hàm đọc bảng {r, g, b} thành Color3
+local function decodeColor(tbl)
+    return Color3.new(tbl.R, tbl.G, tbl.B)
+end
+
 function library:SaveConfig(configName)
-    local json = httpService:JSONEncode(library.flags)
-    writefile(configFolder .. "/" .. configName .. ".json", json)
-    library:Notify({title = "Config", content = "Saved configuration: " .. configName, duration = 3})
+    local data = {}
+    
+    for flag, value in pairs(library.flags) do
+        -- Xử lý riêng cho màu sắc (vì JSON không hiểu Color3)
+        if typeof(value) == "Color3" then
+            data[flag] = {IsColor = true, Value = encodeColor(value)}
+        else
+            data[flag] = value
+        end
+    end
+    
+    writefile(configFolder .. "/" .. configName .. ".json", httpService:JSONEncode(data))
+    library:Notify({title = "Config", content = "Saved: " .. configName, duration = 2})
 end
 
 function library:LoadConfig(configName)
-    if isfile(configFolder .. "/" .. configName .. ".json") then
-        local content = readfile(configFolder .. "/" .. configName .. ".json")
-        local success, decoded = pcall(function() return httpService:JSONDecode(content) end)
-        
-        if success then
-            for flag, value in pairs(decoded) do
-                library.flags[flag] = value
-                -- Tại đây bạn cần gọi lại callback của các element để cập nhật UI/Logic
-                -- Tuy nhiên, với cấu trúc hiện tại, việc update visual hơi phức tạp.
-                -- Ít nhất giá trị trong library.flags đã được cập nhật.
-            end
-            library:Notify({title = "Config", content = "Loaded configuration: " .. configName, duration = 3})
-        else
-            library:Notify({title = "Error", content = "Failed to decode config", duration = 3})
-        end
-    else
-        library:Notify({title = "Error", content = "Config not found: " .. configName, duration = 3})
+    local path = configFolder .. "/" .. configName .. ".json"
+    if not isfile(path) then
+        library:Notify({title = "Error", content = "Config not found!", duration = 2})
+        return
     end
+    
+    local content = readfile(path)
+    local success, decoded = pcall(function() return httpService:JSONDecode(content) end)
+    
+    if not success then
+        library:Notify({title = "Error", content = "JSON Decode Error", duration = 2})
+        return
+    end
+    
+    for flag, rawValue in pairs(decoded) do
+        local option = library.options[flag]
+        local cleanValue = rawValue
+        
+        -- Nếu là màu sắc, giải mã lại thành Color3
+        if type(rawValue) == "table" and rawValue.IsColor then
+            cleanValue = decodeColor(rawValue.Value)
+        end
+
+        -- Cập nhật dữ liệu
+        library.flags[flag] = cleanValue
+        
+        -- Cập nhật Giao diện (Visual) và chạy Callback
+        if option then
+            if option.type == "toggle" then
+                option:SetState(cleanValue)
+            elseif option.type == "slider" then
+                option:SetValue(cleanValue)
+            elseif option.type == "list" then
+                option:SetValue(cleanValue)
+            elseif option.type == "color" then
+                option:SetColor(cleanValue)
+            elseif option.type == "bind" then
+                option:SetKey(cleanValue)
+            elseif option.type == "input" then
+                option:SetValue(cleanValue)
+            end
+        end
+    end
+    
+    library:Notify({title = "Config", content = "Loaded: " .. configName, duration = 2})
 end
 
--- Thêm vào menu
-function library:AddConfigManager(window)
-    local folder = window:AddFolder("Configuration")
-    local configName = ""
+-- Hàm tạo Menu Config nhanh
+function library:AddConfig(window)
+    local tab = window:AddFolder("Settings")
+    local cfgName = "default"
     
-    folder:AddInput({
+    tab:AddInput({
         text = "Config Name",
-        callback = function(val) configName = val end
+        value = "default",
+        callback = function(v) cfgName = v end
     })
     
-    folder:AddButton({
+    tab:AddButton({
         text = "Save Config",
-        callback = function()
-            if configName ~= "" then library:SaveConfig(configName) end
+        callback = function() library:SaveConfig(cfgName) end
+    })
+    
+    tab:AddButton({
+        text = "Load Config",
+        callback = function() library:LoadConfig(cfgName) end
+    })
+
+    -- Tự động liệt kê các file config có sẵn (Option list)
+    local list = tab:AddList({
+        text = "Config List",
+        values = {},
+        callback = function(v) 
+            cfgName = v 
+            library:LoadConfig(v)
         end
     })
-    
-    folder:AddButton({
-        text = "Load Config",
+
+    -- Nút làm mới danh sách config
+    tab:AddButton({
+        text = "Refresh List",
         callback = function()
-            if configName ~= "" then library:LoadConfig(configName) end
+            local files = listfiles(configFolder)
+            local names = {}
+            for _, file in ipairs(files) do
+                -- Lấy tên file bỏ đường dẫn và .json
+                local name = file:match("([^/]+)%.json$")
+                if name then table.insert(names, name) end
+            end
+            list:RefreshList(names) -- Cần sửa lại hàm RefreshList trong code gốc để nhận array mới
         end
     })
 end
