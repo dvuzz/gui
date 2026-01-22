@@ -1,6 +1,6 @@
 local library = {
     flags = {}, 
-    options = {}
+    options = {},
     windows = {}, 
     open = true, 
     theme = { -- Thêm Theme Manager để sau này dễ đổi màu
