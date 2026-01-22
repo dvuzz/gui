@@ -1,9 +1,20 @@
-local library = {flags = {}, windows = {}, open = true}
+local library = {
+    flags = {}, 
+    options = {},
+    windows = {}, 
+    open = true, 
+    theme = { 
+        Accent = Color3.fromRGB(0, 255, 128),
+        Background = Color3.fromRGB(20, 20, 20),
+        Text = Color3.fromRGB(255, 255, 255)
+    }
+}
 
-local runService = game:GetService"RunService"
-local tweenService = game:GetService"TweenService"
-local textService = game:GetService"TextService"
-local inputService = game:GetService"UserInputService"
+local runService = game:GetService("RunService")
+local tweenService = game:GetService("TweenService")
+local textService = game:GetService("TextService")
+local inputService = game:GetService("UserInputService")
+local httpService = game:GetService("HttpService") 
 local ui = Enum.UserInputType.MouseButton1
 
 local dragging, dragInput, dragStart, startPos, dragObject
@@ -12,32 +23,28 @@ local dragging, dragInput, dragStart, startPos, dragObject
 local function round(num, bracket)
 	bracket = bracket or 1
 	local a = math.floor(num/bracket + (math.sign(num) * 0.5)) * bracket
-	if a < 0 then
-		a = a + bracket
-	end
+	if a < 0 then a = a + bracket end
 	return a
 end
 
-local function keyCheck(x,x1)
-	for _,v in next, x1 do
-		if v == x then
-			return true
-		end
-	end
-end
 
 local function update(input)
 	local delta = input.Position - dragStart
 	local yPos = (startPos.Y.Offset + delta.Y) < -36 and -36 or startPos.Y.Offset + delta.Y
-	dragObject:TweenPosition(UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, yPos), "Out", "Quint", 0.1, true)
+    
+	local position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, yPos)
+	tweenService:Create(dragObject, TweenInfo.new(0.15, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {Position = position}):Play()
 end
- 
 
-local chromaColor
+
+local chromaColor = Color3.fromRGB(255, 0, 0)
 local rainbowTime = 5
-spawn(function()
-	while wait() do
-		chromaColor = Color3.fromHSV(tick() % rainbowTime / rainbowTime, 1, 1)
+
+task.spawn(function()
+	while task.wait() do  
+		local hue = tick() % rainbowTime / rainbowTime
+		chromaColor = Color3.fromHSV(hue, 1, 1)
+        
 	end
 end)
 
@@ -1161,6 +1168,13 @@ local function createList(option, parent, holder)
 	layout.Changed:connect(updateSize)
 
 	function option:RefreshList(searchText)
+		
+		if typeof(searchText) == "table" then
+			option.values = searchText
+			searchText = "" 
+		end
+		
+
 		searchText = searchText and string.lower(searchText) or ""
 		
 		for _, item in ipairs(content:GetChildren()) do
@@ -1950,6 +1964,7 @@ end
     option.position = #self.options
     option.flag = option.flag or option.text
     library.flags[option.flag] = option.state
+    library.options[option.flag] = option 
     table.insert(self.options, option)
     
     return option
@@ -1979,6 +1994,7 @@ end
 		option.position = #self.options
 		option.flag = option.flag or option.text
 		library.flags[option.flag] = option.key
+		library.options[option.flag] = option 
 		table.insert(self.options, option)
 		
 		return option
@@ -1998,6 +2014,7 @@ end
 		option.position = #self.options
 		option.flag = option.flag or option.text
 		library.flags[option.flag] = option.value
+		library.options[option.flag] = option 
 		table.insert(self.options, option)
 		
 		return option
@@ -2014,6 +2031,7 @@ end
 		option.position = #self.options
 		option.flag = option.flag or option.text
 		library.flags[option.flag] = option.value
+		library.options[option.flag] = option 
 		table.insert(self.options, option)
 		
 		return option
@@ -2030,6 +2048,7 @@ end
 		option.position = #self.options
 		option.flag = option.flag or option.text
 		library.flags[option.flag] = option.value
+		library.options[option.flag] = option 
 		table.insert(self.options, option)
 		
 		return option
@@ -2045,6 +2064,7 @@ end
 		option.position = #self.options
 		option.flag = option.flag or option.text
 		library.flags[option.flag] = option.color
+		library.options[option.flag] = option 
 		table.insert(self.options, option)
 		
 		return option
@@ -2081,21 +2101,28 @@ end
 
 local UIToggle
 function library:Init()
-	self.base = self.base or self:Create("ScreenGui")
-	if syn and syn.protect_gui then
-		syn.protect_gui(self.base)
-	elseif get_hidden_gui then
-		get_hidden_gui(self.base)
-	elseif gethui then
-		gethui(self.base)
-	else
-		game:GetService"Players".LocalPlayer:Kick("Error: protect_gui function not found")
-		return
-	end
-	self.base.Parent = game:GetService"CoreGui"
-	self.base.ResetOnSpawn = true
-	self.base.Name = "vuz"
 	
+	local guiName = httpService:GenerateGUID(false)
+	
+	self.base = self:Create("ScreenGui", {
+		Name = guiName,
+		ResetOnSpawn = true,
+		IgnoreGuiInset = true, 
+		ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	})
+
+	
+	if gethui then
+		self.base.Parent = gethui()
+	elseif syn and syn.protect_gui then
+		syn.protect_gui(self.base)
+		self.base.Parent = game:GetService("CoreGui")
+	elseif game:GetService("CoreGui"):FindFirstChild("RobloxGui") then
+		self.base.Parent = game:GetService("CoreGui")
+	else
+		self.base.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+	end
+
 	
 	for _, window in next, self.windows do
 		if window.canInit and not window.init then
@@ -2104,6 +2131,12 @@ function library:Init()
 			loadOptions(window)
 		end
 	end
+	
+	
+	if self.AutoLoadConfig then
+		self:LoadConfig(self.AutoLoadConfig)
+	end
+	
 	return self.base
 end
 
@@ -2162,179 +2195,247 @@ end)
 
 
 function library:Notify(config)
-    
-    if not library.base then
-        warn("not found library:Init()")
-        return
-    end
+    if not library.base then return end
 
     
     local notifyContainer = library.base:FindFirstChild("NotifyContainer")
     if not notifyContainer then
         notifyContainer = library:Create("Frame", {
             Name = "NotifyContainer",
-            Position = UDim2.new(1, -20, 1, -20), 
-            Size = UDim2.new(0, 300, 1, 0), 
+            Position = UDim2.new(1, -20, 1, -20),
+            Size = UDim2.new(0, 300, 1, 0),
             AnchorPoint = Vector2.new(1, 1),
             BackgroundTransparency = 1,
-            Parent = library.base, 
-            ClipsDescendants = false
+            Parent = library.base
         })
-
+        
         library:Create("UIListLayout", {
             SortOrder = Enum.SortOrder.LayoutOrder,
             VerticalAlignment = Enum.VerticalAlignment.Bottom,
-            Padding = UDim.new(0, 10), 
+            Padding = UDim.new(0, 10),
             Parent = notifyContainer
         })
     end
 
-    
     config = typeof(config) == "table" and config or {}
-    local titleText = config.title or "Notification"
-    local descText = config.content or "test"
+    local titleText = config.title or "System"
+    local descText = config.content or "Notification"
     local duration = config.duration or 5
-    local image = config.image or "rbxassetid://3944703587" 
-
+    
     
     local notifyFrame = library:Create("Frame", {
         Name = "NotifyFrame",
-        Size = UDim2.new(1, 0, 0, 80), 
-        BackgroundTransparency = 1, 
-        BackgroundColor3 = Color3.fromRGB(15, 15, 15), 
+        Size = UDim2.new(0, 0, 0, 0), 
+        BackgroundColor3 = Color3.fromRGB(25, 25, 25),
+        BorderSizePixel = 0,
         Parent = notifyContainer,
         ClipsDescendants = true,
-        LayoutOrder = tick() 
+        LayoutOrder = tick()
     })
+
+    library:Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = notifyFrame})
     
     
-    library:Create("UICorner", {
-        CornerRadius = UDim.new(0, 6),
-        Parent = notifyFrame
-    })
-    
-    
-    local stroke = library:Create("UIStroke", {
-        Color = Color3.fromRGB(60, 60, 60), 
+    library:Create("UIStroke", {
+        Color = library.theme.Accent or Color3.fromRGB(0, 255, 128),
         Thickness = 1,
-        Transparency = 1, 
+        Transparency = 0.5,
         Parent = notifyFrame
     })
 
-    
-    local icon = library:Create("ImageLabel", {
-        Name = "Icon",
-        Position = UDim2.new(0, 15, 0, 15),
-        Size = UDim2.new(0, 24, 0, 24),
+    local contentFrame = library:Create("Frame", {
+        Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
-        Image = image,
-        ImageColor3 = Color3.fromRGB(255, 255, 255),
-        ImageTransparency = 1,
-        Parent = notifyFrame
+        Parent = notifyFrame,
+        Visible = false 
     })
 
-    
     local titleLabel = library:Create("TextLabel", {
-        Name = "Title",
-        Position = UDim2.new(0, 50, 0, 15),
-        Size = UDim2.new(1, -60, 0, 24),
+        Position = UDim2.new(0, 15, 0, 10),
+        Size = UDim2.new(1, -30, 0, 20),
         BackgroundTransparency = 1,
         Text = titleText,
         TextSize = 16,
         Font = Enum.Font.GothamBold,
         TextColor3 = Color3.fromRGB(255, 255, 255),
         TextXAlignment = Enum.TextXAlignment.Left,
-        TextTransparency = 1,
-        Parent = notifyFrame
+        Parent = contentFrame
     })
 
-    
     local descLabel = library:Create("TextLabel", {
-        Name = "Description",
-        Position = UDim2.new(0, 50, 0, 42),
-        Size = UDim2.new(1, -60, 0, 30),
+        Position = UDim2.new(0, 15, 0, 32),
+        Size = UDim2.new(1, -30, 0, 40),
         BackgroundTransparency = 1,
         Text = descText,
-        TextSize = 13,
+        TextSize = 14,
         Font = Enum.Font.Gotham,
-        TextColor3 = Color3.fromRGB(180, 180, 180), 
+        TextColor3 = Color3.fromRGB(200, 200, 200),
         TextXAlignment = Enum.TextXAlignment.Left,
         TextYAlignment = Enum.TextYAlignment.Top,
         TextWrapped = true,
-        TextTransparency = 1,
-        Parent = notifyFrame
+        Parent = contentFrame
     })
 
     
-    local progressBar = library:Create("Frame", {
-        Name = "Timer",
-        Position = UDim2.new(0, 0, 1, -2),
-        Size = UDim2.new(0, 0, 0, 2), 
-        BackgroundColor3 = Color3.fromRGB(255, 255, 255), 
+    local targetSize = UDim2.new(1, 0, 0, 80)
+    local openTween = tweenService:Create(notifyFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = targetSize})
+    openTween:Play()
+    
+    openTween.Completed:Connect(function()
+        contentFrame.Visible = true
+        
+        titleLabel.TextTransparency = 1
+        descLabel.TextTransparency = 1
+        tweenService:Create(titleLabel, TweenInfo.new(0.2), {TextTransparency = 0}):Play()
+        tweenService:Create(descLabel, TweenInfo.new(0.2), {TextTransparency = 0}):Play()
+    end)
+
+    
+    local timerBar = library:Create("Frame", {
+        Position = UDim2.new(0, 0, 1, -3),
+        Size = UDim2.new(1, 0, 0, 3),
+        BackgroundColor3 = library.theme.Accent or Color3.fromRGB(0, 255, 128),
         BorderSizePixel = 0,
         Parent = notifyFrame
     })
+    
+    tweenService:Create(timerBar, TweenInfo.new(duration, Enum.EasingStyle.Linear), {Size = UDim2.new(0, 0, 0, 3)}):Play()
 
-    local closeBtn = library:Create("ImageButton", {
-        Position = UDim2.new(1, -25, 0, 15),
-        Size = UDim2.new(0, 20, 0, 20),
-        BackgroundTransparency = 1,
-        Image = "rbxassetid://127981991568413",
-        ImageColor3 = Color3.fromRGB(150, 150, 150),
-        ImageTransparency = 1,
-        Parent = notifyFrame
+    
+    task.delay(duration, function()
+        if notifyFrame then
+            contentFrame.Visible = false
+            local closeTween = tweenService:Create(notifyFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Size = UDim2.new(0, 0, 0, 0)})
+            closeTween:Play()
+            closeTween.Completed:Connect(function()
+                notifyFrame:Destroy()
+            end)
+        end
+    end)
+end
+
+local configFolder = "vuzlib"
+if not isfolder(configFolder) then makefolder(configFolder) end
+
+
+local function encodeColor(color)
+    return {R = color.R, G = color.G, B = color.B}
+end
+
+
+local function decodeColor(tbl)
+    return Color3.new(tbl.R, tbl.G, tbl.B)
+end
+
+function library:SaveConfig(configName)
+    local data = {}
+    
+    for flag, value in pairs(library.flags) do
+        
+        if typeof(value) == "Color3" then
+            data[flag] = {IsColor = true, Value = encodeColor(value)}
+        else
+            data[flag] = value
+        end
+    end
+    
+    writefile(configFolder .. "/" .. configName .. ".json", httpService:JSONEncode(data))
+    library:Notify({title = "Config", content = "Saved: " .. configName, duration = 2})
+end
+
+function library:LoadConfig(configName)
+    local path = configFolder .. "/" .. configName .. ".json"
+    if not isfile(path) then
+        library:Notify({title = "Error", content = "Config not found", duration = 2})
+        return
+    end
+    
+    local content = readfile(path)
+    local success, decoded = pcall(function() return httpService:JSONDecode(content) end)
+    
+    if not success then
+        library:Notify({title = "Error", content = "JSON Decode Error", duration = 2})
+        return
+    end
+    
+    for flag, rawValue in pairs(decoded) do
+        local option = library.options[flag]
+        local cleanValue = rawValue
+        
+        
+        if type(rawValue) == "table" and rawValue.IsColor then
+            cleanValue = decodeColor(rawValue.Value)
+        end
+
+        
+        library.flags[flag] = cleanValue
+        
+        
+        if option then
+            if option.type == "toggle" and option.SetState then
+                option:SetState(cleanValue)
+            elseif option.type == "slider" and option.SetValue then
+                option:SetValue(cleanValue)
+            elseif option.type == "list" and option.SetValue then
+                option:SetValue(cleanValue) 
+            elseif option.type == "color" and option.SetColor then
+                option:SetColor(cleanValue)
+            elseif option.type == "bind" and option.SetKey then
+                option:SetKey(cleanValue)
+            elseif option.type == "input" and option.SetValue then
+                option:SetValue(cleanValue)
+            end
+        end
+    end
+    
+    library:Notify({title = "Config", content = "Loaded: " .. configName, duration = 2})
+end
+
+
+function library:AddConfigTab(window)
+    local tab = window:AddFolder("Settings")
+    local cfgName = "default"
+    
+    tab:AddInput({
+        text = "Config Name",
+        value = "default",
+        callback = function(v) cfgName = v end
+    })
+    
+    tab:AddButton({
+        text = "Save Config",
+        callback = function() library:SaveConfig(cfgName) end
+    })
+    
+    tab:AddButton({
+        text = "Load Config",
+        callback = function() library:LoadConfig(cfgName) end
     })
 
     
-    tweenService:Create(notifyFrame, TweenInfo.new(0.3), {BackgroundTransparency = 0.1}):Play()
-    tweenService:Create(stroke, TweenInfo.new(0.3), {Transparency = 0}):Play()
-    
-        
-    delay(0.1, function()
-        tweenService:Create(titleLabel, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
-        tweenService:Create(descLabel, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
-        tweenService:Create(icon, TweenInfo.new(0.3), {ImageTransparency = 0}):Play()
-        tweenService:Create(closeBtn, TweenInfo.new(0.3), {ImageTransparency = 0}):Play()
-    end)
+    local list = tab:AddList({
+        text = "Config List",
+        values = {},
+        callback = function(v) 
+            cfgName = v 
+            library:LoadConfig(v)
+        end
+    })
 
     
-    tweenService:Create(progressBar, TweenInfo.new(duration, Enum.EasingStyle.Linear), {Size = UDim2.new(1, 0, 0, 2)}):Play()
-
-    
-    local closed = false
-    local function closeNotify()
-        if closed then return end
-        closed = true
-        
-        
-        tweenService:Create(notifyFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-            BackgroundTransparency = 1,
-            Position = UDim2.new(0, 50, 0, 0) 
-        }):Play()
-        tweenService:Create(stroke, TweenInfo.new(0.3), {Transparency = 1}):Play()
-        tweenService:Create(titleLabel, TweenInfo.new(0.2), {TextTransparency = 1}):Play()
-        tweenService:Create(descLabel, TweenInfo.new(0.2), {TextTransparency = 1}):Play()
-        tweenService:Create(icon, TweenInfo.new(0.2), {ImageTransparency = 1}):Play()
-        tweenService:Create(closeBtn, TweenInfo.new(0.2), {ImageTransparency = 1}):Play()
-        tweenService:Create(progressBar, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
-
-        
-        delay(0.4, function()
-            notifyFrame:Destroy()
-        end)
-    end
-
-    
-    delay(duration, closeNotify)
-
-    
-    closeBtn.MouseButton1Click:Connect(closeNotify)
-    closeBtn.MouseEnter:Connect(function()
-        tweenService:Create(closeBtn, TweenInfo.new(0.2), {ImageColor3 = Color3.fromRGB(255, 255, 255)}):Play()
-    end)
-    closeBtn.MouseLeave:Connect(function()
-        tweenService:Create(closeBtn, TweenInfo.new(0.2), {ImageColor3 = Color3.fromRGB(150, 150, 150)}):Play()
-    end)
+    tab:AddButton({
+        text = "Refresh List",
+        callback = function()
+            local files = listfiles(configFolder)
+            local names = {}
+            for _, file in ipairs(files) do
+                
+                local name = file:match("([^/]+)%.json$")
+                if name then table.insert(names, name) end
+            end
+            list:RefreshList(names) 
+        end
+    })
 end
 
 return library
