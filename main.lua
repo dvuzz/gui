@@ -1,5 +1,6 @@
 local library = {
     flags = {}, 
+    options = {}
     windows = {}, 
     open = true, 
     theme = { -- Thêm Theme Manager để sau này dễ đổi màu
@@ -2307,7 +2308,6 @@ function library:Notify(config)
     end)
 end
 
-local httpService = game:GetService("HttpService")
 local configFolder = "vuzlib" -- Tên thư mục chứa config
 if not isfolder(configFolder) then makefolder(configFolder) end
 
