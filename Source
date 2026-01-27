@@ -3007,7 +3007,7 @@ function library:AddConfigTab(window)
                 local name = file:match("([^/]+)%.json$")
                 if name then table.insert(names, name) end
             end
-            list:RefreshList(names) 
+            list:Refresh(names)
         end
     })
 end
