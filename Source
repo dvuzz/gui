@@ -1900,26 +1900,10 @@ local function createInput(option, parent)
 end
 
 
-local function toHex(color)
-    local r, g, b = math.floor(color.R * 255), math.floor(color.G * 255), math.floor(color.B * 255)
-    return string.format("#%02X%02X%02X", r, g, b)
-end
-
-local function fromHex(hex)
-    hex = hex:gsub("#","")
-    local r, g, b = tonumber("0x"..hex:sub(1,2)), tonumber("0x"..hex:sub(3,4)), tonumber("0x"..hex:sub(5,6))
-    if r and g and b then
-        return Color3.fromRGB(r, g, b)
-    end
-    return nil
-end
-
 local function createColorPickerWindow(option)
-    
     option.mainHolder = library:Create("ImageButton", {
-        Name = "ColorPickerWindow",
-        ZIndex = 20, 
-        Size = UDim2.new(0, 260, 0, 235), 
+        ZIndex = 3,
+        Size = UDim2.new(0, 240, 0, 180),
         BackgroundTransparency = 1,
         Image = "rbxassetid://3570695787",
         ImageTransparency = 1,
@@ -1929,263 +1913,296 @@ local function createColorPickerWindow(option)
         SliceScale = 0.02,
         Parent = library.base
     })
-
-    
-    local container = library:Create("Frame", {
-        Size = UDim2.new(1, -16, 1, -16),
-        Position = UDim2.new(0, 8, 0, 8),
-        BackgroundTransparency = 1,
-        Parent = option.mainHolder
-    })
-
-    
-    option.satval = library:Create("ImageLabel", {
-        ZIndex = 21,
-        Position = UDim2.new(0, 0, 0, 0),
-        Size = UDim2.new(1, -60, 0, 150),
-        BackgroundTransparency = 1,
-        Image = "rbxassetid://4155801252", 
-        BorderSizePixel = 0,
-        ClipsDescendants = true,
-        Parent = container
-    })
-    
-    option.satvalSlider = library:Create("Frame", {
-        ZIndex = 22,
-        Size = UDim2.new(0, 6, 0, 6),
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-        BorderSizePixel = 0,
-        Parent = option.satval
-    })
-    library:Create("UICorner", {CornerRadius = UDim.new(1,0), Parent = option.satvalSlider}) 
-    library:Create("UIStroke", {Thickness = 1, Color = Color3.new(0,0,0), Parent = option.satvalSlider})
-
-    
+    local hue, sat, val = Color3.toHSV(option.color)
+    hue, sat, val = hue == 0 and 1 or hue, sat + 0.005, val - 0.005
+    local editinghue
+    local editingsatval
+    local currentColor = option.color
+    local previousColors = {[1] = option.color}
+    local originalColor = option.color
+    local rainbowEnabled
+    local rainbowLoop
+    function option:updateVisuals(Color)
+        currentColor = Color
+        self.visualize2.ImageColor3 = Color
+        hue, sat, val = Color3.toHSV(Color)
+        hue = hue == 0 and 1 or hue
+        self.satval.BackgroundColor3 = Color3.fromHSV(hue, 1, 1)
+        self.hueSlider.Position = UDim2.new(1 - hue, 0, 0, 0)
+        self.satvalSlider.Position = UDim2.new(sat, 0, 1 - val, 0)
+    end
     option.hue = library:Create("ImageLabel", {
-        ZIndex = 21,
-        Position = UDim2.new(1, -45, 0, 0),
-        Size = UDim2.new(0, 20, 0, 150),
+        ZIndex = 3,
+        AnchorPoint = Vector2.new(0, 1),
+        Position = UDim2.new(0, 8, 1, -8),
+        Size = UDim2.new(1, -100, 0, 22),
         BackgroundTransparency = 1,
         Image = "rbxassetid://3570695787",
+        ImageTransparency = 1,
         ScaleType = Enum.ScaleType.Slice,
         SliceCenter = Rect.new(100, 100, 100, 100),
         SliceScale = 0.02,
-        Parent = container
+        Parent = option.mainHolder
     })
-
-    library:Create("UIGradient", {
-        Rotation = 90,
+    local Gradient = library:Create("UIGradient", {
         Color = ColorSequence.new({
             ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
-            ColorSequenceKeypoint.new(0.167, Color3.fromRGB(255, 0, 255)),
-            ColorSequenceKeypoint.new(0.333, Color3.fromRGB(0, 0, 255)),
-            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)),
-            ColorSequenceKeypoint.new(0.667, Color3.fromRGB(0, 255, 0)),
-            ColorSequenceKeypoint.new(0.833, Color3.fromRGB(255, 255, 0)),
+            ColorSequenceKeypoint.new(0.157, Color3.fromRGB(255, 0, 255)),
+            ColorSequenceKeypoint.new(0.323, Color3.fromRGB(0, 0, 255)),
+            ColorSequenceKeypoint.new(0.488, Color3.fromRGB(0, 255, 255)),            ColorSequenceKeypoint.new(0.66, Color3.fromRGB(0, 255, 0)),
+            ColorSequenceKeypoint.new(0.817, Color3.fromRGB(255, 255, 0)),
             ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0)),
         }),
         Parent = option.hue
     })
-
     option.hueSlider = library:Create("Frame", {
-        ZIndex = 22,
-        Size = UDim2.new(1, 2, 0, 4),
-        Position = UDim2.new(-0.05, 0, 0, 0),
-        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-        BorderSizePixel = 0,
+        ZIndex = 3,
+        Position = UDim2.new(1 - hue, 0, 0, 0),
+        Size = UDim2.new(0, 2, 1, 0),
+        BackgroundTransparency = 1,
+        BackgroundColor3 = Color3.fromRGB(30, 30, 30),
+        BorderColor3 = Color3.fromRGB(255, 255, 255),
         Parent = option.hue
     })
-    library:Create("UIStroke", {Thickness = 1, Color = Color3.new(0,0,0), Parent = option.hueSlider})
-
-    
-    local inputsFrame = library:Create("Frame", {
-        ZIndex = 21,
-        Position = UDim2.new(0, 0, 0, 160),
-        Size = UDim2.new(1, 0, 0, 60),
+    option.hue.InputBegan:connect(function(Input)
+        if Input.UserInputType == ui or Input.UserInputType == Enum.UserInputType.Touch then
+            editinghue = true
+            local X = (Input.Position.X - option.hue.AbsolutePosition.X) / option.hue.AbsoluteSize.X
+            X = math.clamp(X, 0, 0.995)
+            option:updateVisuals(Color3.fromHSV(1 - X, sat, val))
+        end
+    end)
+    inputService.InputChanged:connect(function(Input)
+        if (Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch) and editinghue then
+            local X = (Input.Position.X - option.hue.AbsolutePosition.X) / option.hue.AbsoluteSize.X
+            X = math.clamp(X, 0, 0.995)
+            option:updateVisuals(Color3.fromHSV(1 - X, sat, val))
+        end
+    end)
+    option.hue.InputEnded:connect(function(Input)
+        if Input.UserInputType == ui or Input.UserInputType == Enum.UserInputType.Touch then
+            editinghue = false
+        end
+    end)
+    option.satval = library:Create("ImageLabel", {
+        ZIndex = 3,
+        Position = UDim2.new(0, 8, 0, 8),
+        Size = UDim2.new(1, -100, 1, -42),
         BackgroundTransparency = 1,
-        Parent = container
+        BackgroundColor3 = Color3.fromHSV(hue, 1, 1),
+        BorderSizePixel = 0,
+        Image = "rbxassetid://4155801252",
+        ImageTransparency = 1,
+        ClipsDescendants = true,
+        Parent = option.mainHolder
     })
-
-    
+    option.satvalSlider = library:Create("Frame", {
+        ZIndex = 3,
+        AnchorPoint = Vector2.new(0.5, 0.5),        Position = UDim2.new(sat, 0, 1 - val, 0),
+        Size = UDim2.new(0, 4, 0, 4),
+        Rotation = 45,
+        BackgroundTransparency = 1,
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        Parent = option.satval
+    })
+    option.satval.InputBegan:connect(function(Input)
+        if Input.UserInputType == ui or Input.UserInputType == Enum.UserInputType.Touch then
+            editingsatval = true
+            local X = (Input.Position.X - option.satval.AbsolutePosition.X) / option.satval.AbsoluteSize.X
+            local Y = (Input.Position.Y - option.satval.AbsolutePosition.Y) / option.satval.AbsoluteSize.Y
+            X = math.clamp(X, 0.005, 1)
+            Y = math.clamp(Y, 0, 0.995)
+            option:updateVisuals(Color3.fromHSV(hue, X, 1 - Y))
+        end
+    end)
+    inputService.InputChanged:connect(function(Input)
+        if (Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch) and editingsatval then
+            local X = (Input.Position.X - option.satval.AbsolutePosition.X) / option.satval.AbsoluteSize.X
+            local Y = (Input.Position.Y - option.satval.AbsolutePosition.Y) / option.satval.AbsoluteSize.Y
+            X = math.clamp(X, 0.005, 1)
+            Y = math.clamp(Y, 0, 0.995)
+            option:updateVisuals(Color3.fromHSV(hue, X, 1 - Y))
+        end
+    end)
+    option.satval.InputEnded:connect(function(Input)
+        if Input.UserInputType == ui or Input.UserInputType == Enum.UserInputType.Touch then
+            editingsatval = false
+        end
+    end)
     option.visualize2 = library:Create("ImageLabel", {
-        ZIndex = 21,
-        Position = UDim2.new(1, -20, 0, 0),
-        Size = UDim2.new(0, 20, 0, 20),
+        ZIndex = 3,
+        Position = UDim2.new(1, -8, 0, 8),
+        Size = UDim2.new(0, -80, 0, 80),
         BackgroundTransparency = 1,
         Image = "rbxassetid://3570695787",
-        ImageColor3 = option.color,
+        ImageColor3 = currentColor,
         ScaleType = Enum.ScaleType.Slice,
         SliceCenter = Rect.new(100, 100, 100, 100),
         SliceScale = 0.02,
-        Parent = inputsFrame
+        Parent = option.mainHolder
     })
-
-    
-    local hexBox = library:Create("TextBox", {
-        ZIndex = 21,
-        Position = UDim2.new(0, 0, 0, 0),
-        Size = UDim2.new(0.6, 0, 0, 20),
-        BackgroundColor3 = Color3.fromRGB(25, 25, 25),
-        BorderSizePixel = 0,
-        Text = toHex(option.color),
-        Font = Enum.Font.SourceSansBold,
-        TextSize = 14,
+    option.resetColor = library:Create("ImageLabel", {
+        ZIndex = 3,
+        Position = UDim2.new(1, -8, 0, 92),
+        Size = UDim2.new(0, -80, 0, 18),
+        BackgroundTransparency = 1,
+        Image = "rbxassetid://3570695787",
+        ImageTransparency = 1,        ImageColor3 = Color3.fromRGB(20, 20, 20),
+        ScaleType = Enum.ScaleType.Slice,
+        SliceCenter = Rect.new(100, 100, 100, 100),
+        SliceScale = 0.02,
+        Parent = option.mainHolder
+    })
+    option.resetText = library:Create("TextLabel", {
+        ZIndex = 3,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Text = "Reset",
+        TextTransparency = 1,
+        Font = Enum.Font.Gotham,
+        TextSize = 15,
         TextColor3 = Color3.fromRGB(255, 255, 255),
-        PlaceholderText = "Hex...",
-        Parent = inputsFrame
+        Parent = option.resetColor
     })
-    library:Create("UICorner", {CornerRadius = UDim.new(0, 4), Parent = hexBox})
-
-    
-    local rgbBox = library:Create("TextBox", {
-        ZIndex = 21,
-        Position = UDim2.new(0, 0, 0, 25),
-        Size = UDim2.new(0.6, 0, 0, 20),
-        BackgroundColor3 = Color3.fromRGB(25, 25, 25),
-        BorderSizePixel = 0,
-        Text = string.format("%d, %d, %d", option.color.R*255, option.color.G*255, option.color.B*255),
-        Font = Enum.Font.SourceSansBold,
-        TextSize = 14,
+    option.resetColor.InputBegan:connect(function(Input)
+        if (Input.UserInputType == ui or Input.UserInputType == Enum.UserInputType.Touch) and not rainbowEnabled then
+            previousColors = {originalColor}
+            option:SetColor(originalColor)
+        end
+        if Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch then
+            tweenService:Create(option.resetColor, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageColor3 = Color3.fromRGB(10, 10, 10)}):Play()
+        end
+    end)
+    option.resetColor.InputEnded:connect(function(Input)
+        if Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch then
+            tweenService:Create(option.resetColor, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageColor3 = Color3.fromRGB(20, 20, 20)}):Play()
+        end
+    end)
+    option.undoColor = library:Create("ImageLabel", {
+        ZIndex = 3,
+        Position = UDim2.new(1, -8, 0, 112),
+        Size = UDim2.new(0, -80, 0, 18),
+        BackgroundTransparency = 1,
+        Image = "rbxassetid://3570695787",
+        ImageTransparency = 1,
+        ImageColor3 = Color3.fromRGB(20, 20, 20),
+        ScaleType = Enum.ScaleType.Slice,
+        SliceCenter = Rect.new(100, 100, 100, 100),
+        SliceScale = 0.02,
+        Parent = option.mainHolder
+    })
+    option.undoText = library:Create("TextLabel", {
+        ZIndex = 3,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Text = "Undo",
+        TextTransparency = 1,        Font = Enum.Font.Gotham,
+        TextSize = 15,
         TextColor3 = Color3.fromRGB(255, 255, 255),
-        PlaceholderText = "R, G, B",
-        Parent = inputsFrame
+        Parent = option.undoColor
     })
-    library:Create("UICorner", {CornerRadius = UDim.new(0, 4), Parent = rgbBox})
-
-    
-    local rainbowBtn = library:Create("TextButton", {
-        ZIndex = 21,
-        Position = UDim2.new(0.65, 0, 0, 25),
-        Size = UDim2.new(0.35, 0, 0, 20),
-        BackgroundColor3 = Color3.fromRGB(25, 25, 25),
-        BorderSizePixel = 0,
-        Text = "Rainbow",
-        Font = Enum.Font.SourceSansBold,
-        TextSize = 12,
-        TextColor3 = Color3.fromRGB(200, 200, 200),
-        Parent = inputsFrame
-    })
-    library:Create("UICorner", {CornerRadius = UDim.new(0, 4), Parent = rainbowBtn})
-
-
-    
-    local hue, sat, val = Color3.toHSV(option.color)
-    local rainbowLoop = nil
-
-    
-    function option:UpdatePickerVisuals(c, ignoreInputs)
-        option.visualize2.ImageColor3 = c
-        hue, sat, val = Color3.toHSV(c)
-
-        
-        option.satval.BackgroundColor3 = Color3.fromHSV(hue, 1, 1)
-
-        
-        option.hueSlider.Position = UDim2.new(-0.05, 0, 1 - hue, 0)
-        option.satvalSlider.Position = UDim2.new(sat, 0, 1 - val, 0)
-
-        
-        if not ignoreInputs then
-            hexBox.Text = toHex(c)
-            rgbBox.Text = string.format("%d, %d, %d", math.floor(c.R*255), math.floor(c.G*255), math.floor(c.B*255))
-        end
-    end
-    
-    
-    option:UpdatePickerVisuals(option.color)
-
-    
-    local draggingHue = false
-    option.hue.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            draggingHue = true
-        end
-    end)
-    
-    option.hue.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            draggingHue = false
-        end
-    end)
-
-    
-    local draggingSat = false
-    option.satval.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            draggingSat = true
-        end
-    end)
-
-    option.satval.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            draggingSat = false
-        end
-    end)
-
-    
-    inputService.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            if draggingHue then
-                local relativeY = math.clamp((input.Position.Y - option.hue.AbsolutePosition.Y) / option.hue.AbsoluteSize.Y, 0, 1)
-                hue = 1 - relativeY
-                local newColor = Color3.fromHSV(hue, sat, val)
-                option:SetColor(newColor)
-            elseif draggingSat then
-                local relativeX = math.clamp((input.Position.X - option.satval.AbsolutePosition.X) / option.satval.AbsoluteSize.X, 0, 1)
-                local relativeY = math.clamp((input.Position.Y - option.satval.AbsolutePosition.Y) / option.satval.AbsoluteSize.Y, 0, 1)
-                sat = relativeX
-                val = 1 - relativeY
-                local newColor = Color3.fromHSV(hue, sat, val)
-                option:SetColor(newColor)
+    option.undoColor.InputBegan:connect(function(Input)
+        if (Input.UserInputType == ui or Input.UserInputType == Enum.UserInputType.Touch) and not rainbowEnabled then
+            local Num = #previousColors == 1 and 0 or 1
+            option:SetColor(previousColors[#previousColors - Num])
+            if #previousColors ~= 1 then
+                table.remove(previousColors, #previousColors)
             end
         end
-    end)
-
-    
-    hexBox.FocusLost:Connect(function()
-        local newColor = fromHex(hexBox.Text)
-        if newColor then
-            option:SetColor(newColor)
-        else
-            hexBox.Text = toHex(option.color) 
+        if Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch then
+            tweenService:Create(option.undoColor, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageColor3 = Color3.fromRGB(10, 10, 10)}):Play()
         end
     end)
-
-    
-    rgbBox.FocusLost:Connect(function()
-        local r, g, b = rgbBox.Text:match("(%d+)%s*[,;]%s*(%d+)%s*[,;]%s*(%d+)")
-        if r and g and b then
-            local newColor = Color3.fromRGB(tonumber(r), tonumber(g), tonumber(b))
-            option:SetColor(newColor)
-        else
-            local c = option.color
-            rgbBox.Text = string.format("%d, %d, %d", c.R*255, c.G*255, c.B*255)
+    option.undoColor.InputEnded:connect(function(Input)
+        if Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch then
+            tweenService:Create(option.undoColor, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageColor3 = Color3.fromRGB(20, 20, 20)}):Play()
         end
     end)
-
-    
-    function option:SetRainbow(bool)
-        if bool then
-            if rainbowLoop then rainbowLoop:Disconnect() end
-            rainbowLoop = runService.Heartbeat:Connect(function()
-                local tickHue = tick() % 5 / 5
-                local rainbowColor = Color3.fromHSV(tickHue, 1, 1)
-                option:SetColor(rainbowColor)
-                
-                rainbowBtn.TextColor3 = rainbowColor
-            end)
-            rainbowBtn.Text = "Rainbow: ON"
-        else
-            if rainbowLoop then rainbowLoop:Disconnect() rainbowLoop = nil end
-            rainbowBtn.Text = "Rainbow"
-            rainbowBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    option.setColor = library:Create("ImageLabel", {
+        ZIndex = 3,
+        Position = UDim2.new(1, -8, 0, 132),
+        Size = UDim2.new(0, -80, 0, 18),
+        BackgroundTransparency = 1,
+        Image = "rbxassetid://3570695787",
+        ImageTransparency = 1,
+        ImageColor3 = Color3.fromRGB(20, 20, 20),
+        ScaleType = Enum.ScaleType.Slice,
+        SliceCenter = Rect.new(100, 100, 100, 100),
+        SliceScale = 0.02,
+        Parent = option.mainHolder
+    })
+    option.setText = library:Create("TextLabel", {
+        ZIndex = 3,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Text = "Set",
+        TextTransparency = 1,
+        Font = Enum.Font.Gotham,
+        TextSize = 15,
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        Parent = option.setColor
+    })
+    option.setColor.InputBegan:connect(function(Input)
+        if (Input.UserInputType == ui or Input.UserInputType == Enum.UserInputType.Touch) and not rainbowEnabled then
+            table.insert(previousColors, currentColor)
+            option:SetColor(currentColor)        end
+        if Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch then
+            tweenService:Create(option.setColor, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageColor3 = Color3.fromRGB(10, 10, 10)}):Play()
         end
-    end
-
-    rainbowBtn.MouseButton1Click:Connect(function()
-        option:SetRainbow(not rainbowLoop)
     end)
+    option.setColor.InputEnded:connect(function(Input)
+        if Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch then
+            tweenService:Create(option.setColor, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageColor3 = Color3.fromRGB(20, 20, 20)}):Play()
+        end
+    end)
+    option.rainbow = library:Create("ImageLabel", {
+        ZIndex = 3,
+        Position = UDim2.new(1, -8, 0, 152),
+        Size = UDim2.new(0, -80, 0, 18),
+        BackgroundTransparency = 1,
+        Image = "rbxassetid://3570695787",
+        ImageTransparency = 1,
+        ImageColor3 = Color3.fromRGB(20, 20, 20),
+        ScaleType = Enum.ScaleType.Slice,
+        SliceCenter = Rect.new(100, 100, 100, 100),
+        SliceScale = 0.02,
+        Parent = option.mainHolder
+    })
+    option.rainbowText = library:Create("TextLabel", {
+        ZIndex = 3,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Text = "Rainbow",
+        TextTransparency = 1,
+        Font = Enum.Font.Gotham,
+        TextSize = 15,
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        Parent = option.rainbow
+    })
+    option.rainbow.InputBegan:connect(function(Input)
+        if Input.UserInputType == ui or Input.UserInputType == Enum.UserInputType.Touch then
+            rainbowEnabled = not rainbowEnabled
+            if rainbowEnabled then
+                if rainbowLoop then rainbowLoop:Disconnect() end
+                rainbowLoop = runService.Heartbeat:connect(function()
+                    option:SetColor(chromaColor)
+                    option.rainbowText.TextColor3 = chromaColor
+                end)
+            else
+                if rainbowLoop then rainbowLoop:Disconnect() end
+                option:SetColor(previousColors[#previousColors])
+                option.rainbowText.TextColor3 = Color3.fromRGB(255, 255, 255)
+            end
+        end
+        if Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch then            tweenService:Create(option.rainbow, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageColor3 = Color3.fromRGB(10, 10, 10)}):Play()
+        end
+    end)
+    option.rainbow.InputEnded:connect(function(Input)
+        if Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch then
+            tweenService:Create(option.rainbow, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageColor3 = Color3.fromRGB(20, 20, 20)}):Play()
+        end
+    end)
+    return option
 end
 
 local function createColor(option, parent, holder)
