@@ -488,7 +488,7 @@ end
 local function createToggle(option, parent)
     
     option.state = (typeof(option.state) == "boolean") and option.state or false
-    option.onColor = option.onColor or library.theme.Accent or Color3.fromRGB(255, 255, 255)
+    option.onColor = option.onColor or library.theme.Accent or Color3.fromRGB(0, 255, 128)
     option.offColor = option.offColor or Color3.fromRGB(50, 50, 50)
     option.locked = false
 
