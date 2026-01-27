@@ -4,7 +4,7 @@ local library = {
     windows = {}, 
     open = true, 
     theme = { 
-        Accent = Color3.fromRGB(255, 255, 255),
+        Accent = Color3.fromRGB(0, 255, 128),
         Background = Color3.fromRGB(20, 20, 20),
         Text = Color3.fromRGB(255, 255, 255)
     }
