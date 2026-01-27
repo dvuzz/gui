@@ -4,7 +4,7 @@ local library = {
     windows = {}, 
     open = true, 
     theme = { 
-        Accent = Color3.fromRGB(0, 255, 128),
+        Accent = Color3.fromRGB(255, 255, 255),
         Background = Color3.fromRGB(20, 20, 20),
         Text = Color3.fromRGB(255, 255, 255)
     }
@@ -59,6 +59,10 @@ end
 
 local function createOptionHolder(holderTitle, parent, parentTable, subHolder)
 	local size = subHolder and 34 or 40
+	
+	
+	local maxHeight = 400 
+	
 	parentTable.main = library:Create("ImageButton", {
 		LayoutOrder = subHolder and parentTable.position or 0,
 		Position = UDim2.new(0, 20 + (250 * (parentTable.position or 0)), 0, 20),
@@ -119,25 +123,60 @@ local function createOptionHolder(holderTitle, parent, parentTable, subHolder)
 		Parent = closeHolder
 	})
 	
-	parentTable.content = library:Create("Frame", {
-		Position = UDim2.new(0, 0, 0, size),
-		Size = UDim2.new(1, 0, 1, -size),
-		BackgroundTransparency = 1,
-		Parent = parentTable.main
-	})
+	
+	if subHolder then
+		parentTable.content = library:Create("Frame", {
+			Position = UDim2.new(0, 0, 0, size),
+			Size = UDim2.new(1, 0, 1, -size),
+			BackgroundTransparency = 1,
+			Parent = parentTable.main
+		})
+	else
+		parentTable.content = library:Create("ScrollingFrame", {
+			Position = UDim2.new(0, 0, 0, size),
+			Size = UDim2.new(1, 0, 1, -size),
+			BackgroundTransparency = 1,
+			ScrollBarThickness = 1, 
+			ScrollBarImageColor3 = library.theme.Accent or Color3.fromRGB(255, 255, 255),
+			BorderSizePixel = 0,
+			CanvasSize = UDim2.new(0, 0, 0, 0),
+			Parent = parentTable.main
+		})
+	end
 	
 	local layout = library:Create("UIListLayout", {
 		SortOrder = Enum.SortOrder.LayoutOrder,
 		Parent = parentTable.content
 	})
 	
-	layout.Changed:connect(function()
-		parentTable.content.Size = UDim2.new(1, 0, 0, layout.AbsoluteContentSize.Y)
-		parentTable.main.Size = #parentTable.options > 0 and parentTable.open and UDim2.new(0, 230, 0, layout.AbsoluteContentSize.Y + size) or UDim2.new(0, 230, 0, size)
-	end)
+	
+	local function updateSize()
+		if subHolder then
+			
+			parentTable.content.Size = UDim2.new(1, 0, 0, layout.AbsoluteContentSize.Y)
+			parentTable.main.Size = #parentTable.options > 0 and parentTable.open and UDim2.new(0, 230, 0, layout.AbsoluteContentSize.Y + size) or UDim2.new(0, 230, 0, size)
+		else
+			
+			local contentHeight = layout.AbsoluteContentSize.Y
+			parentTable.content.CanvasSize = UDim2.new(0, 0, 0, contentHeight + 10)
+			
+			
+			local targetHeight = math.min(contentHeight + size + 5, maxHeight)
+			
+			if #parentTable.options > 0 and parentTable.open then
+				parentTable.main.Size = UDim2.new(0, 230, 0, targetHeight)
+			else
+				parentTable.main.Size = UDim2.new(0, 230, 0, size)
+			end
+		end
+	end
+
+	layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateSize)
 	
 	if not subHolder then
 		library:Create("UIPadding", {
+			PaddingLeft = UDim.new(0, 5), 
+			PaddingRight = UDim.new(0, 5),
 			Parent = parentTable.content
 		})
 		
@@ -171,24 +210,23 @@ local function createOptionHolder(holderTitle, parent, parentTable, subHolder)
 	end
 	
 	closeHolder.InputBegan:connect(function(input)
-		if input.UserInputType == ui then
+		if input.UserInputType == ui or input.UserInputType == Enum.UserInputType.Touch then
 			parentTable.open = not parentTable.open
 			tweenService:Create(close, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Rotation = parentTable.open and 90 or 180, ImageColor3 = parentTable.open and Color3.fromRGB(50, 50, 50) or Color3.fromRGB(30, 30, 30)}):Play()
+			
 			if subHolder then
 				tweenService:Create(title, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = parentTable.open and Color3.fromRGB(16, 16, 16) or Color3.fromRGB(10, 10, 10)}):Play()
+				
+				parentTable.main:TweenSize(#parentTable.options > 0 and parentTable.open and UDim2.new(0, 230, 0, layout.AbsoluteContentSize.Y + size) or UDim2.new(0, 230, 0, size), "Out", "Quad", 0.2, true)
 			else
 				tweenService:Create(round, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageColor3 = parentTable.open and Color3.fromRGB(10, 10, 10) or Color3.fromRGB(6, 6, 6)}):Play()
+				
+				
+				local contentHeight = layout.AbsoluteContentSize.Y
+				local targetHeight = math.min(contentHeight + size + 5, maxHeight)
+				
+				parentTable.main:TweenSize(#parentTable.options > 0 and parentTable.open and UDim2.new(0, 230, 0, targetHeight) or UDim2.new(0, 230, 0, size), "Out", "Quad", 0.2, true)
 			end
-			parentTable.main:TweenSize(#parentTable.options > 0 and parentTable.open and UDim2.new(0, 230, 0, layout.AbsoluteContentSize.Y + size) or UDim2.new(0, 230, 0, size), "Out", "Quad", 0.2, true)
-		elseif input.UserInputType == Enum.UserInputType.Touch then
-			parentTable.open = not parentTable.open
-			tweenService:Create(close, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Rotation = parentTable.open and 90 or 180, ImageColor3 = parentTable.open and Color3.fromRGB(50, 50, 50) or Color3.fromRGB(30, 30, 30)}):Play()
-			if subHolder then
-				tweenService:Create(title, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = parentTable.open and Color3.fromRGB(16, 16, 16) or Color3.fromRGB(10, 10, 10)}):Play()
-			else
-				tweenService:Create(round, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageColor3 = parentTable.open and Color3.fromRGB(10, 10, 10) or Color3.fromRGB(6, 6, 6)}):Play()
-			end
-			parentTable.main:TweenSize(#parentTable.options > 0 and parentTable.open and UDim2.new(0, 230, 0, layout.AbsoluteContentSize.Y + size) or UDim2.new(0, 230, 0, size), "Out", "Quad", 0.2, true)
 		end
 	end)
 
@@ -302,7 +340,7 @@ end
 local function createLabel(option, parent)
     
     option.color = option.color or Color3.fromRGB(255, 255, 255)
-    option.hoverColor = option.hoverColor or Color3.fromRGB(0, 255, 128)
+    option.hoverColor = option.hoverColor or Color3.fromRGB(255, 255, 255)
     option.copyable = option.copyable or false 
     option.alignment = option.alignment or Enum.TextXAlignment.Left
     option.font = option.font or Enum.Font.GothamSemibold 
@@ -450,7 +488,7 @@ end
 local function createToggle(option, parent)
     
     option.state = (typeof(option.state) == "boolean") and option.state or false
-    option.onColor = option.onColor or library.theme.Accent or Color3.fromRGB(0, 255, 128)
+    option.onColor = option.onColor or library.theme.Accent or Color3.fromRGB(255, 255, 255)
     option.offColor = option.offColor or Color3.fromRGB(50, 50, 50)
     option.locked = false
 
@@ -1078,7 +1116,7 @@ local function createBind(option, parent)
                     if gameProcessed and input.UserInputType == Enum.UserInputType.Keyboard then return end
 
                     
-                    tweenService:Create(buttonBg, TweenInfo.new(0.1), {BackgroundColor3 = library.theme.Accent or Color3.fromRGB(0, 255, 128)}):Play()
+                    tweenService:Create(buttonBg, TweenInfo.new(0.1), {BackgroundColor3 = library.theme.Accent or Color3.fromRGB(255, 255, 255)}):Play()
                     tweenService:Create(bindText, TweenInfo.new(0.1), {TextColor3 = Color3.fromRGB(20, 20, 20)}):Play()
 
                     if option.hold then
@@ -1203,7 +1241,7 @@ local function createSlider(option, parent)
     
     local gradient = library:Create("UIGradient", {
         Color = ColorSequence.new{
-            ColorSequenceKeypoint.new(0, library.theme.Accent or Color3.fromRGB(0, 255, 128)), 
+            ColorSequenceKeypoint.new(0, library.theme.Accent or Color3.fromRGB(150, 150, 150)), 
             ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))  
         },
         Parent = fill
@@ -2811,7 +2849,7 @@ function library:Notify(config)
     
     
     library:Create("UIStroke", {
-        Color = library.theme.Accent or Color3.fromRGB(0, 255, 128),
+        Color = library.theme.Accent or Color3.fromRGB(255, 255, 255),
         Thickness = 1,
         Transparency = 0.5,
         Parent = notifyFrame
@@ -2868,7 +2906,7 @@ function library:Notify(config)
     local timerBar = library:Create("Frame", {
         Position = UDim2.new(0, 0, 1, -3),
         Size = UDim2.new(1, 0, 0, 3),
-        BackgroundColor3 = library.theme.Accent or Color3.fromRGB(0, 255, 128),
+        BackgroundColor3 = library.theme.Accent or Color3.fromRGB(255, 255, 255),
         BorderSizePixel = 0,
         Parent = notifyFrame
     })
