@@ -4,26 +4,26 @@ local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/dvuzz
 ```
 
 
-### Adding Tab
+### Adding window
 ```lua
-local tab = library:CreateWindow("Your Title")
+local window = library:CreateWindow("Your Title")
 ```
 
 
 
-### Adding Folder
+### Adding tab
 ```lua
-local folder = tab:AddFolder("Folder")
+local tab = window:AddFolder("Folder")
 ```
 
 ### Adding config
 ```lua
-library:AddConfigTab(tab)
+library:AddConfigTab(window)
 ```
 
 ### Adding Button
 ```lua
-folder:AddButton({
+window:AddButton({
 	text = "Click me",
 	flag = "button",
 	callback = function()
@@ -37,7 +37,7 @@ end
 
 ### Adding Toggle
 ```lua
-folder:AddToggle({
+window:AddToggle({
 	text = "Toggle",
 	flag = "toggle",
 	callback = function(v)
@@ -51,14 +51,14 @@ end
 
 ### Adding Label
 ```lua
-folder:AddLabel({
+window:AddLabel({
 	text = "This Is Sick!",
 	type = "label"
 	})
 
-folder:AddLabel("Hello World")
+window:AddLabel("Hello World")
 
-folder:AddLabel({
+window:AddLabel({
     text = "link",
     icon = "rbxassetid://Image ID", 
     copyable = true,
@@ -69,7 +69,7 @@ folder:AddLabel({
 
 ### Adding paragraph
 ```lua
-folder:AddParagraph({
+window:AddParagraph({
     title = "test",
     content = "hello"
 })
@@ -79,7 +79,7 @@ folder:AddParagraph({
 
 ### Adding Slider
 ```lua
-folder:AddSlider({
+window:AddSlider({
 	text = "Fov",
 	min = 70,
 	max = 170,
@@ -97,7 +97,7 @@ end
 
 ### Adding input
 ```lua
-folder:AddInput({
+window:AddInput({
     text = "test",
     flag = "input",
     value = "",
@@ -115,7 +115,7 @@ folder:AddInput({
 
 ### Adding color
 ```lua
-folder:AddColor({
+window:AddColor({
 	text = "Color Picker",
 	flag = "color",
 	type = "color",
@@ -131,7 +131,7 @@ end
 
 ### Adding Dropdown
 ```lua
-folder:AddList({
+window:AddList({
     text = "Color",
     values = {"Red", "Green", "Blue"},
     multiselect = false,-- true or false
@@ -162,7 +162,7 @@ library:Notify({
 
 ### Adding Bind
 ```lua
-folder:AddBind({
+window:AddBind({
     text = "bind",
     key = "X",
     hold = false,
