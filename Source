@@ -2657,8 +2657,6 @@ end)
 
 function library:Notify(config)
     if not library.base then return end
-
-    
     local notifyContainer = library.base:FindFirstChild("NotifyContainer")
     if not notifyContainer then
         notifyContainer = library:Create("Frame", {
@@ -2672,6 +2670,7 @@ function library:Notify(config)
         
         library:Create("UIListLayout", {
             SortOrder = Enum.SortOrder.LayoutOrder,
+            HorizontalAlignment = Enum.HorizontalAlignment.Center,
             VerticalAlignment = Enum.VerticalAlignment.Bottom,
             Padding = UDim.new(0, 10),
             Parent = notifyContainer
@@ -2683,13 +2682,24 @@ function library:Notify(config)
     local descText = config.content or "Notification"
     local duration = config.duration or 5
     
-    
-    local notifyFrame = library:Create("Frame", {
-        Name = "NotifyFrame",
-        Size = UDim2.new(0, 0, 0, 0), 
+    local notifyFrame1 = library:Create("Frame", {
+        Name = "NotifyFrame1",
+        Size = UDim2.new(1, 0, 0, 80), 
+        Position = UDim2.new(1, 90, 0, 0),
         BackgroundColor3 = Color3.fromRGB(25, 25, 25),
         BorderSizePixel = 0,
         Parent = notifyContainer,
+        BackgroundTransparency = 1,
+        LayoutOrder = tick()
+    })
+    
+    local notifyFrame = library:Create("Frame", {
+        Name = "NotifyFrame",
+        Size = UDim2.new(1, 0, 1, 0), 
+        Position = UDim2.new(1, 90, 0, 0),
+        BackgroundColor3 = Color3.fromRGB(25, 25, 25),
+        BorderSizePixel = 0,
+        Parent = notifyFrame1,
         ClipsDescendants = true,
         LayoutOrder = tick()
     })
@@ -2698,7 +2708,7 @@ function library:Notify(config)
     
     
     library:Create("UIStroke", {
-        Color = library.theme.Accent or Color3.fromRGB(255, 255, 255),
+        Color = library.theme.Accent or Color3.fromRGB(0, 255, 128),
         Thickness = 1,
         Transparency = 0.5,
         Parent = notifyFrame
@@ -2708,7 +2718,7 @@ function library:Notify(config)
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
         Parent = notifyFrame,
-        Visible = false 
+        Visible = true 
     })
 
     local titleLabel = library:Create("TextLabel", {
@@ -2720,6 +2730,7 @@ function library:Notify(config)
         Font = Enum.Font.GothamBold,
         TextColor3 = Color3.fromRGB(255, 255, 255),
         TextXAlignment = Enum.TextXAlignment.Left,
+        TextTransparency = 0,
         Parent = contentFrame
     })
 
@@ -2734,42 +2745,27 @@ function library:Notify(config)
         TextXAlignment = Enum.TextXAlignment.Left,
         TextYAlignment = Enum.TextYAlignment.Top,
         TextWrapped = true,
+        TextTransparency = 0,
         Parent = contentFrame
     })
-
     
-    local targetSize = UDim2.new(1, 0, 0, 80)
-    local openTween = tweenService:Create(notifyFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = targetSize})
+    local openTween = tweenService:Create(notifyFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)})
     openTween:Play()
-    
-    openTween.Completed:Connect(function()
-        contentFrame.Visible = true
-        
-        titleLabel.TextTransparency = 1
-        descLabel.TextTransparency = 1
-        tweenService:Create(titleLabel, TweenInfo.new(0.2), {TextTransparency = 0}):Play()
-        tweenService:Create(descLabel, TweenInfo.new(0.2), {TextTransparency = 0}):Play()
-    end)
-
-    
     local timerBar = library:Create("Frame", {
         Position = UDim2.new(0, 0, 1, -3),
         Size = UDim2.new(1, 0, 0, 3),
-        BackgroundColor3 = library.theme.Accent or Color3.fromRGB(255, 255, 255),
+        BackgroundColor3 = library.theme.Accent or Color3.fromRGB(0, 255, 128),
         BorderSizePixel = 0,
         Parent = notifyFrame
     })
     
     tweenService:Create(timerBar, TweenInfo.new(duration, Enum.EasingStyle.Linear), {Size = UDim2.new(0, 0, 0, 3)}):Play()
-
-    
     task.delay(duration, function()
-        if notifyFrame then
-            contentFrame.Visible = false
-            local closeTween = tweenService:Create(notifyFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Size = UDim2.new(0, 0, 0, 0)})
+        if notifyFrame1 then
+            local closeTween = tweenService:Create(notifyFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Position = UDim2.new(1, 90, 0, 0)})
             closeTween:Play()
             closeTween.Completed:Connect(function()
-                notifyFrame:Destroy()
+                notifyFrame1:Destroy()
             end)
         end
     end)
