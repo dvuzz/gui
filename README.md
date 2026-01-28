@@ -182,3 +182,9 @@ library:Close()
 ```lua
 library:Init()
 ```
+### You must call library:Init() first, then you can call the watermark
+```lua
+library:Watermark({
+    name = "test" 
+})
+```
