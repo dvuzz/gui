@@ -3062,7 +3062,7 @@ function library:Watermark(config)
     local holder = library:Create("Frame", {
         Name = "WatermarkHolder",
         Parent = library.base,
-        Position = UDim2.new(0, 20, 0, -50), 
+        Position = UDim2.new(0, 20, 0, 20), 
         Size = UDim2.new(0, 0, 0, 36), 
         BackgroundTransparency = 1,
         ZIndex = 100
@@ -3093,7 +3093,6 @@ function library:Watermark(config)
         ClipsDescendants = true
     })
 
-    
     library:Create("UICorner", {
         CornerRadius = UDim.new(0, 8),
         Parent = main
@@ -3103,7 +3102,6 @@ function library:Watermark(config)
         Parent = shadow
     })
 
-    
     library:Create("UIStroke", {
         Parent = main,
         Color = Color3.fromRGB(255, 255, 255), 
@@ -3111,7 +3109,6 @@ function library:Watermark(config)
         Transparency = 0.8 
     })
 
-    
     library:Create("UIGradient", {
         Parent = main,
         Rotation = 90,
@@ -3122,7 +3119,7 @@ function library:Watermark(config)
     })
 
     
-    local icon = library:Create("ImageLabel", {
+    local icon = library:Create("ImageButton", {
         Parent = main,
         Position = UDim2.new(0, 8, 0.5, 0),
         AnchorPoint = Vector2.new(0, 0.5),
@@ -3132,7 +3129,6 @@ function library:Watermark(config)
         ImageColor3 = Color3.fromRGB(255, 255, 255)
     })
 
-    
     local label = library:Create("TextLabel", {
         Parent = main,
         Position = UDim2.new(0, 36, 0, 0), 
@@ -3145,7 +3141,6 @@ function library:Watermark(config)
         TextXAlignment = Enum.TextXAlignment.Left
     })
 
-    
     local separator = library:Create("Frame", {
         Parent = main,
         AnchorPoint = Vector2.new(0, 0.5),
@@ -3156,10 +3151,60 @@ function library:Watermark(config)
     })
 
     
-    tweenService:Create(holder, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Position = UDim2.new(0, 20, 0, 20)
-    }):Play()
+    local draggingWM, dragInputWM, dragStartWM, startPosWM
+    
+    local function updateWM(input)
+        local delta = input.Position - dragStartWM
+        local position = UDim2.new(startPosWM.X.Scale, startPosWM.X.Offset + delta.X, startPosWM.Y.Scale, startPosWM.Y.Offset + delta.Y)
+        tweenService:Create(holder, TweenInfo.new(0.1, Enum.EasingStyle.Sine), {Position = position}):Play()
+    end
 
+    holder.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            draggingWM = true
+            dragStartWM = input.Position
+            startPosWM = holder.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    draggingWM = false
+                end
+            end)
+        end
+    end)
+
+    holder.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInputWM = input
+        end
+    end)
+
+    inputService.InputChanged:Connect(function(input)
+        if input == dragInputWM and draggingWM then
+            updateWM(input)
+        end
+    end)
+    
+    local isCollapsed = false
+    local currentTextWidth = 100 
+
+    icon.MouseButton1Click:Connect(function()
+        isCollapsed = not isCollapsed
+        
+        if isCollapsed then
+            
+            tweenService:Create(holder, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Size = UDim2.new(0, 36, 0, 36)}):Play()
+            tweenService:Create(label, TweenInfo.new(0.2), {TextTransparency = 1}):Play()
+            tweenService:Create(separator, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
+            tweenService:Create(icon, TweenInfo.new(0.2), {ImageColor3 = library.theme.Accent or Color3.fromRGB(200, 200, 200)}):Play()
+        else
+            
+            tweenService:Create(holder, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, currentTextWidth, 0, 36)}):Play()
+            tweenService:Create(label, TweenInfo.new(0.2), {TextTransparency = 0}):Play()
+            tweenService:Create(separator, TweenInfo.new(0.2), {BackgroundTransparency = 0}):Play()
+            tweenService:Create(icon, TweenInfo.new(0.2), {ImageColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+        end
+    end)
     
     task.spawn(function()
         while holder and holder.Parent do
@@ -3170,7 +3215,6 @@ function library:Watermark(config)
             end
             local time = os.date("%H:%M:%S")
             
-             
             local content = string.format("%s   <font color='#888888'>|</font>   %s FPS   <font color='#888888'>|</font>   %s MS   <font color='#888888'>|</font>   %s", wmTitle, fps, ping, time)
             label.Text = content
             label.RichText = true
@@ -3178,11 +3222,14 @@ function library:Watermark(config)
             
             local txtSize = textService:GetTextSize(label.Text:gsub("<[^>]+>", ""), 13, Enum.Font.GothamBold, Vector2.new(1000, 36))
             local targetSizeX = txtSize.X + 36 + 15 
+            currentTextWidth = targetSizeX 
             
             
-            tweenService:Create(holder, TweenInfo.new(0.3, Enum.EasingStyle.Sine), {
-                Size = UDim2.new(0, targetSizeX, 0, 36)
-            }):Play()
+            if not isCollapsed then
+                tweenService:Create(holder, TweenInfo.new(0.3, Enum.EasingStyle.Sine), {
+                    Size = UDim2.new(0, targetSizeX, 0, 36)
+                }):Play()
+            end
             
             task.wait(1)
         end
