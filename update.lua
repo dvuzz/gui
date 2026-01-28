@@ -2012,6 +2012,8 @@ local function createColor(option, parent, holder)
         ClipsDescendants = true,
         Parent = library.base 
     })
+    
+    option.mainHolder = pickerFrame -- <--- THÊM DÒNG NÀY VÀO
 
     library:Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = pickerFrame})
     library:Create("UIStroke", {Color = Color3.fromRGB(60, 60, 60), Thickness = 1, Parent = pickerFrame})
