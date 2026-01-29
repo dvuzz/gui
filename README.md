@@ -173,7 +173,7 @@ window:AddBind({
 
 ### How to use the tooltip
 ```lua
-for example:
+--for example:
 
 window:AddToggle({
 	text = "Toggle",
