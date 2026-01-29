@@ -173,6 +173,8 @@ window:AddBind({
 
 ### How to use the tooltip
 ```lua
+for example:
+
 window:AddToggle({
 	text = "Toggle",
 	tooltip = "test",-- Add it here (only: toggle , button , slider, input)
