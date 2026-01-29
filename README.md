@@ -59,7 +59,7 @@ window:AddLabel({
 window:AddLabel("Hello World")
 
 window:AddLabel({
-    text = "link",
+    text = "A Discord link or something like that",
     icon = "rbxassetid://Image ID", 
     copyable = true,
     hoverColor = Color3.fromRGB(88, 101, 242) 
