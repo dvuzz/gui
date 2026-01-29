@@ -175,7 +175,7 @@ window:AddBind({
 ```lua
 window:AddToggle({
 	text = "Toggle",
-	tooltip = "hello hello hello hello",-- Add it here (only: toggle , button , slider, input)
+	tooltip = "test",-- Add it here (only: toggle , button , slider, input)
 	flag = "toggle",
 	callback = function(v)
 	print(v)
