@@ -9,6 +9,10 @@ local library = {
     }
 }
 
+local function getService(name)
+    return game:GetService(name)
+end
+
 local runService = game:GetService("RunService")
 local tweenService = game:GetService("TweenService")
 local textService = game:GetService("TextService")
@@ -18,6 +22,32 @@ local ui = Enum.UserInputType.MouseButton1
 
 local dragging, dragInput, dragStart, startPos, dragObject
 
+local function getSafeParent()
+    
+    if gethui then 
+        return gethui() 
+    end
+    
+    
+    if syn and syn.protect_gui then 
+        local gui = Instance.new("ScreenGui")
+        syn.protect_gui(gui)
+        gui.Parent = game:GetService("CoreGui")
+        return gui
+    end
+    
+    
+    local success, coreGui = pcall(function() 
+        return game:GetService("CoreGui") 
+    end)
+    if success and coreGui then 
+        return coreGui 
+    end
+    
+    
+    local player = game:GetService("Players").LocalPlayer
+    return player:WaitForChild("PlayerGui")
+end
 
 local function round(num, bracket)
 	bracket = bracket or 1
@@ -30,9 +60,9 @@ end
 local function update(input)
 	local delta = input.Position - dragStart
 	local yPos = (startPos.Y.Offset + delta.Y) < -36 and -36 or startPos.Y.Offset + delta.Y
+    local position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, yPos)
     
-	local position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, yPos)
-	tweenService:Create(dragObject, TweenInfo.new(0.15, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {Position = position}):Play()
+    tweenService:Create(dragObject, TweenInfo.new(0.15, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {Position = position}):Play()
 end
 
 
@@ -193,12 +223,10 @@ local function createOptionHolder(holderTitle, parent, parentTable, subHolder)
 			end
 		end)
 		title.InputChanged:connect(function(input)
-			if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-				dragInput = input
-			elseif dragging and input.UserInputType == Enum.UserInputType.Touch then
-				dragInput = input
-			end
-		end)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        dragInput = input
+    end
+end)
 			title.InputEnded:connect(function(input)
 			if input.UserInputType == ui then
 				dragging = false
@@ -2567,23 +2595,19 @@ function library:Init()
 	
 	self.base = self:Create("ScreenGui", {
 		Name = guiName,
-		ResetOnSpawn = true,
+		ResetOnSpawn = false,
 		IgnoreGuiInset = true, 
 		ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	})
 
-	
-	if gethui then
-		self.base.Parent = gethui()
-	elseif syn and syn.protect_gui then
-		syn.protect_gui(self.base)
-		self.base.Parent = game:GetService("CoreGui")
-	elseif game:GetService("CoreGui"):FindFirstChild("RobloxGui") then
-		self.base.Parent = game:GetService("CoreGui")
-	else
-		self.base.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
-	end
-
+local parent = getSafeParent()
+    if parent:IsA("ScreenGui") then
+        
+        self.base.Parent = parent.Parent
+        self.base = parent 
+    else
+        self.base.Parent = parent
+    end
 	
 	for _, window in next, self.windows do
 		if window.canInit and not window.init then
@@ -2646,11 +2670,14 @@ inputService.InputChanged:connect(function(input)
 	end
 end)
 
-wait(1)
-local VirtualUser=game:service'VirtualUser'
-game:service('Players').LocalPlayer.Idled:connect(function()
-VirtualUser:CaptureController()
-VirtualUser:ClickButton2(Vector2.new())
+task.spawn(function()
+    local virtualUser = game:GetService("VirtualUser")
+    game:GetService("Players").LocalPlayer.Idled:Connect(function()
+        pcall(function()
+            virtualUser:CaptureController()
+            virtualUser:ClickButton2(Vector2.new())
+        end)
+    end)
 end)
 
 
