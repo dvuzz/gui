@@ -188,3 +188,7 @@ library:Watermark({
     name = "test" 
 })
 ```
+### You must call library:Init() first, then you can call the keybindlist
+```lua
+library:KeybindList()
+```
