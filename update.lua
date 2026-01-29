@@ -3237,14 +3237,19 @@ function library:Watermark(config)
 end
 
 function library:KeybindList()
+    -- Xóa bảng cũ nếu lỡ chạy 2 lần
+    if library.base:FindFirstChild("KeybindList") then
+        library.base.KeybindList:Destroy()
+    end
+
     local bindList = library:Create("Frame", {
         Name = "KeybindList",
         Size = UDim2.new(0, 180, 0, 22), 
         Position = UDim2.new(0, 10, 0.5, 0),
         BackgroundColor3 = Color3.fromRGB(20, 20, 20),
-        Parent = library.base
+        Parent = library.base,
+        Visible = false -- Ẩn mặc định
     })
-    
     
     library:Create("UICorner", {CornerRadius = UDim.new(0, 4), Parent = bindList})
     library:Create("UIStroke", {Color = library.theme.Accent or Color3.fromRGB(255, 255, 255), Thickness = 1, Parent = bindList})
@@ -3266,13 +3271,13 @@ function library:KeybindList()
         Parent = bindList
     })
     
-    local layout = library:Create("UIListLayout", {
+    library:Create("UIListLayout", {
         Parent = container,
         SortOrder = Enum.SortOrder.LayoutOrder,
         Padding = UDim.new(0, 2)
     })
 
-    
+    -- Cho phép kéo thả (Drag)
     local dragging, dragInput, dragStart, startPos
     bindList.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -3290,44 +3295,65 @@ function library:KeybindList()
     end)
     bindList.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
 
+    -- == LOGIC MỚI ĐÃ SỬA LỖI ==
+    local UserInputService = game:GetService("UserInputService")
     
     game:GetService("RunService").RenderStepped:Connect(function()
-        
-        for _, v in pairs(container:GetChildren()) do if v:IsA("Frame") then v:Destroy() end end
+        -- 1. Xóa danh sách cũ để render lại
+        for _, v in pairs(container:GetChildren()) do 
+            if v:IsA("Frame") then v:Destroy() end 
+        end
         
         local activeBinds = {}
         
-        
+        -- 2. Duyệt qua tất cả option
         for _, option in pairs(library.options) do
-            if option.type == "toggle" and option.state == true then
-                table.insert(activeBinds, {name = option.text, type = "Toggle"})
-            elseif option.type == "bind" and option.key ~= "None" then
-                
-                local isPressed = false
-                if typeof(option.key) == "EnumItem" then
-                    isPressed = game:GetService("UserInputService"):IsKeyDown(option.key)
-                elseif typeof(option.key) == "string" and Enum.KeyCode[option.key] then
-                     isPressed = game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode[option.key])
+            
+            -- >> Kiểm tra TOGGLE <<
+            if option.type == "toggle" then
+                -- Kiểm tra qua 'flags' (chính xác hơn option.state)
+                if library.flags[option.flag] == true then
+                    table.insert(activeBinds, {name = option.text, mode = "Toggle"})
                 end
-                
-                if option.hold and isPressed then
-                     table.insert(activeBinds, {name = option.text, type = "Hold"})
-                elseif not option.hold and library.flags[option.flag] then 
-                     table.insert(activeBinds, {name = option.text, type = "Toggle"})
+            
+            -- >> Kiểm tra BIND (Giữ phím) <<
+            elseif option.type == "bind" and option.hold == true and option.key ~= "None" then
+                local isPressed = false
+                local key = option.key
+
+                -- Chuyển đổi String thành Enum nếu cần (đề phòng lỗi)
+                if typeof(key) == "string" then
+                    if Enum.KeyCode[key] then key = Enum.KeyCode[key]
+                    elseif Enum.UserInputType[key] then key = Enum.UserInputType[key] end
+                end
+
+                -- Kiểm tra phím đang nhấn
+                if typeof(key) == "EnumItem" then
+                    if key.EnumType == Enum.KeyCode then
+                        isPressed = UserInputService:IsKeyDown(key)
+                    elseif key.EnumType == Enum.UserInputType then
+                        isPressed = UserInputService:IsMouseButtonPressed(key)
+                    end
+                end
+
+                if isPressed then
+                    table.insert(activeBinds, {name = option.text, mode = "Holding"})
                 end
             end
         end
 
-        
-        for i, bind in ipairs(activeBinds) do
+        -- 3. Hiển thị ra màn hình
+        for _, bind in ipairs(activeBinds) do
             local item = library:Create("Frame", {
-                Size = UDim2.new(1, 0, 0, 18),
+                Size = UDim2.new(1, 0, 0, 20),
                 BackgroundTransparency = 1,
                 Parent = container
             })
+            
+            -- Tên chức năng
             library:Create("TextLabel", {
-                Position = UDim2.new(0, 5, 0, 0),
-                Size = UDim2.new(1, -10, 1, 0),
+                Position = UDim2.new(0, 10, 0, 0),
+                Size = UDim2.new(1, -60, 1, 0),
                 BackgroundTransparency = 1,
                 Text = bind.name,
                 TextColor3 = Color3.fromRGB(200, 200, 200),
@@ -3336,22 +3362,29 @@ function library:KeybindList()
                 TextXAlignment = Enum.TextXAlignment.Left,
                 Parent = item
             })
+            
+            -- Trạng thái [Toggle/Holding]
             library:Create("TextLabel", {
-                Position = UDim2.new(0, 0, 0, 0),
-                Size = UDim2.new(1, -5, 1, 0),
+                Position = UDim2.new(1, -10, 0, 0),
+                AnchorPoint = Vector2.new(1, 0),
+                Size = UDim2.new(0, 50, 1, 0),
                 BackgroundTransparency = 1,
-                Text = "[" .. bind.type .. "]",
+                Text = "[" .. bind.mode .. "]",
                 TextColor3 = library.theme.Accent or Color3.fromRGB(255, 255, 255),
                 Font = Enum.Font.GothamBold,
-                TextSize = 13,
+                TextSize = 12,
                 TextXAlignment = Enum.TextXAlignment.Right,
                 Parent = item
             })
         end
         
-        
-        bindList.Size = UDim2.new(0, 180, 0, 25 + (#activeBinds * 20))
-        bindList.Visible = #activeBinds > 0 
+        -- 4. Ẩn/Hiện bảng
+        if #activeBinds > 0 then
+            bindList.Visible = true
+            bindList.Size = UDim2.new(0, 180, 0, 28 + (#activeBinds * 20))
+        else
+            bindList.Visible = false
+        end
     end)
 end
 
