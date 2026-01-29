@@ -9,6 +9,103 @@ local library = {
     }
 }
 
+local tooltipFrame = nil
+local tooltipLabel = nil
+local tooltipConnection = nil
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
+
+local function updateTooltip(text, visible, targetObject)
+    
+    if not tooltipFrame then
+        tooltipFrame = library:Create("Frame", {
+            Name = "Tooltip",
+            Size = UDim2.new(0, 0, 0, 24),
+            BackgroundColor3 = Color3.fromRGB(35, 35, 35),
+            ZIndex = 1000, 
+            Visible = false,
+            Parent = library.base 
+        })
+        library:Create("UICorner", {CornerRadius = UDim.new(0, 5), Parent = tooltipFrame})
+        library:Create("UIStroke", {Color = library.theme.Accent or Color3.fromRGB(255, 255, 255), Thickness = 1, Transparency = 0.5, Parent = tooltipFrame})
+        
+        tooltipLabel = library:Create("TextLabel", {
+            Size = UDim2.new(1, 0, 1, 0),
+            BackgroundTransparency = 1,
+            TextColor3 = Color3.fromRGB(255, 255, 255),
+            TextSize = 13,
+            Font = Enum.Font.GothamMedium,
+            TextTransparency = 1, 
+            Parent = tooltipFrame
+        })
+    end
+
+    
+    if tooltipConnection then
+        tooltipConnection:Disconnect()
+        tooltipConnection = nil
+    end
+
+    
+    if visible and text then
+        tooltipLabel.Text = "  " .. text .. "  "
+        
+        
+        local txtSize = game:GetService("TextService"):GetTextSize(tooltipLabel.Text, 13, Enum.Font.GothamMedium, Vector2.new(999, 999))
+        tooltipFrame.Size = UDim2.new(0, txtSize.X + 10, 0, 26)
+        tooltipFrame.Visible = true
+        
+        
+        TweenService:Create(tooltipLabel, TweenInfo.new(0.2), {TextTransparency = 0}):Play()
+        tooltipFrame.BackgroundTransparency = 1
+        TweenService:Create(tooltipFrame, TweenInfo.new(0.2), {BackgroundTransparency = 0.1}):Play()
+
+        
+        local lastInput = UserInputService:GetLastInputType()
+        local isTouch = (lastInput == Enum.UserInputType.Touch)
+
+        if isTouch and targetObject then
+            
+            local absPos = targetObject.AbsolutePosition
+            local absSize = targetObject.AbsoluteSize
+            local screenSize = library.base.AbsoluteSize
+            
+            
+            local posX = absPos.X + (absSize.X / 2) - (tooltipFrame.AbsoluteSize.X / 2)
+            local posY = absPos.Y - tooltipFrame.AbsoluteSize.Y - 10
+            
+            
+            if posY < 0 then
+                posY = absPos.Y + absSize.Y + 10
+            end
+            
+            
+            if posX < 0 then posX = 10 end
+            if (posX + tooltipFrame.AbsoluteSize.X) > screenSize.X then
+                posX = screenSize.X - tooltipFrame.AbsoluteSize.X - 10
+            end
+
+            tooltipFrame.Position = UDim2.new(0, posX, 0, posY)
+            
+        else
+            
+            tooltipConnection = RunService.RenderStepped:Connect(function()
+                local mX, mY = Mouse.X, Mouse.Y
+                
+                tooltipFrame.Position = UDim2.new(0, mX + 15, 0, mY + 15)
+            end)
+        end
+    else
+        
+        tooltipFrame.Visible = false
+        tooltipLabel.TextTransparency = 1
+    end
+end
+
 local function getService(name)
     return game:GetService(name)
 end
@@ -650,6 +747,16 @@ local function createToggle(option, parent)
         end
     end)
 
+if option.tooltip then
+    main.MouseEnter:Connect(function()
+        
+        updateTooltip(option.tooltip, true, main) 
+    end)
+    
+    main.MouseLeave:Connect(function()
+        updateTooltip(nil, false)
+    end)
+end
     
     if option.state then
         option:Set(true, true)
@@ -934,6 +1041,17 @@ local function createButton(option, parent)
         main:Destroy()
         
     end
+
+if option.tooltip then
+    main.MouseEnter:Connect(function()
+        
+        updateTooltip(option.tooltip, true, main) 
+    end)
+    
+    main.MouseLeave:Connect(function()
+        updateTooltip(nil, false)
+    end)
+end
 
     return option
 end
@@ -1454,6 +1572,16 @@ local function createSlider(option, parent)
         tweenService:Create(valueBg, TweenInfo.new(0.2), {ImageColor3 = Color3.fromRGB(50, 50, 50)}):Play()
     end)
 
+if option.tooltip then
+    main.MouseEnter:Connect(function()
+        
+        updateTooltip(option.tooltip, true, main) 
+    end)
+    
+    main.MouseLeave:Connect(function()
+        updateTooltip(nil, false)
+    end)
+end
     
     option:SetValue(option.value, true)
     
@@ -1959,9 +2087,20 @@ local function createInput(option, parent)
     end
 
     function option:SetVisible(bool)
-        main.Visible = bool
-        
+        main.Visible = bool       
     end
+    
+ if option.tooltip then
+    main.MouseEnter:Connect(function()
+        
+        updateTooltip(option.tooltip, true, main) 
+    end)
+    
+    main.MouseLeave:Connect(function()
+        updateTooltip(nil, false)
+    end)
+end   
+    
 end
 
 local function toHex(color)
@@ -3094,125 +3233,6 @@ function library:Watermark(config)
     
     pcall(function()
         game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
-    end)
-end
-
-function library:KeybindList()
-    local bindList = library:Create("Frame", {
-        Name = "KeybindList",
-        Size = UDim2.new(0, 180, 0, 22), 
-        Position = UDim2.new(0, 10, 0.5, 0),
-        BackgroundColor3 = Color3.fromRGB(20, 20, 20),
-        Parent = library.base
-    })
-    
-    
-    library:Create("UICorner", {CornerRadius = UDim.new(0, 4), Parent = bindList})
-    library:Create("UIStroke", {Color = library.theme.Accent or Color3.fromRGB(255, 255, 255), Thickness = 1, Parent = bindList})
-    
-    local title = library:Create("TextLabel", {
-        Size = UDim2.new(1, 0, 0, 22),
-        BackgroundTransparency = 1,
-        Text = "Keybinds",
-        TextColor3 = Color3.fromRGB(255, 255, 255),
-        Font = Enum.Font.GothamBold,
-        TextSize = 14,
-        Parent = bindList
-    })
-
-    local container = library:Create("Frame", {
-        Position = UDim2.new(0, 0, 0, 25),
-        Size = UDim2.new(1, 0, 0, 0),
-        BackgroundTransparency = 1,
-        Parent = bindList
-    })
-    
-    local layout = library:Create("UIListLayout", {
-        Parent = container,
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0, 2)
-    })
-
-    
-    local dragging, dragInput, dragStart, startPos
-    bindList.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true; dragStart = input.Position; startPos = bindList.Position
-        end
-    end)
-    bindList.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
-    end)
-    game:GetService("UserInputService").InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            local delta = input.Position - dragStart
-            bindList.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end)
-    bindList.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
-
-    
-    game:GetService("RunService").RenderStepped:Connect(function()
-        
-        for _, v in pairs(container:GetChildren()) do if v:IsA("Frame") then v:Destroy() end end
-        
-        local activeBinds = {}
-        
-        
-        for _, option in pairs(library.options) do
-            if option.type == "toggle" and option.state == true then
-                table.insert(activeBinds, {name = option.text, type = "Toggle"})
-            elseif option.type == "bind" and option.key ~= "None" then
-                
-                local isPressed = false
-                if typeof(option.key) == "EnumItem" then
-                    isPressed = game:GetService("UserInputService"):IsKeyDown(option.key)
-                elseif typeof(option.key) == "string" and Enum.KeyCode[option.key] then
-                     isPressed = game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode[option.key])
-                end
-                
-                if option.hold and isPressed then
-                     table.insert(activeBinds, {name = option.text, type = "Hold"})
-                elseif not option.hold and library.flags[option.flag] then 
-                     table.insert(activeBinds, {name = option.text, type = "Toggle"})
-                end
-            end
-        end
-
-        
-        for i, bind in ipairs(activeBinds) do
-            local item = library:Create("Frame", {
-                Size = UDim2.new(1, 0, 0, 18),
-                BackgroundTransparency = 1,
-                Parent = container
-            })
-            library:Create("TextLabel", {
-                Position = UDim2.new(0, 5, 0, 0),
-                Size = UDim2.new(1, -10, 1, 0),
-                BackgroundTransparency = 1,
-                Text = bind.name,
-                TextColor3 = Color3.fromRGB(200, 200, 200),
-                Font = Enum.Font.Gotham,
-                TextSize = 13,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                Parent = item
-            })
-            library:Create("TextLabel", {
-                Position = UDim2.new(0, 0, 0, 0),
-                Size = UDim2.new(1, -5, 1, 0),
-                BackgroundTransparency = 1,
-                Text = "[" .. bind.type .. "]",
-                TextColor3 = library.theme.Accent or Color3.fromRGB(255, 255, 255),
-                Font = Enum.Font.GothamBold,
-                TextSize = 13,
-                TextXAlignment = Enum.TextXAlignment.Right,
-                Parent = item
-            })
-        end
-        
-        
-        bindList.Size = UDim2.new(0, 180, 0, 25 + (#activeBinds * 20))
-        bindList.Visible = #activeBinds > 0 
     end)
 end
 
