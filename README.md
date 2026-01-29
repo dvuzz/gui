@@ -59,7 +59,7 @@ window:AddLabel({
 window:AddLabel("Hello World")
 
 window:AddLabel({
-    text = "A Discord link or something like that",
+    text = "link",
     icon = "rbxassetid://Image ID", 
     copyable = true,
     hoverColor = Color3.fromRGB(88, 101, 242) 
@@ -168,6 +168,18 @@ window:AddBind({
     hold = false,
     callback = function()
     end
+})
+```
+
+### How to use the tooltip
+```lua
+window:AddToggle({
+	text = "Toggle",
+	tooltip = "hello hello hello hello",-- Add it here (only: toggle , button , slider, input)
+	flag = "toggle",
+	callback = function(v)
+	print(v)
+end
 })
 ```
 
